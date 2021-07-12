@@ -1,4 +1,5 @@
-import { String3D } from './string'
+import { Ribbon, String3D } from './string'
+import { normalize, cross } from './math'
 function assignGlobal(data: Record<string, any>) {
   for (const i in data) (window as any)[i] = data[i]
 }
@@ -17,6 +18,8 @@ const strings = [...new Array(10)].map(() => {
   return string
 })
 
+const ribbons = strings.map(s => new Ribbon(s.numSegments))
+
 function update(){
   const dt = 0.001
   strings.forEach((string, i) => {
@@ -34,6 +37,7 @@ function update(){
     string.addHardnessForce(10, 10)
     string.addForce(10, 4)
     string.update(f, dt)
+    ribbons[i].update(normalize(cross(string.directions[0], { x: 0, y: 1, z: 0 })), string.directions, 0.1)
   })
 }
 
@@ -50,12 +54,37 @@ function render() {
     restPoints.forEach(({ x, z }) => ctx.lineTo(x, z))
     ctx.stroke()
   })
+
+  ctx.globalAlpha = 0.2
+  strings.forEach((string, i) => {
+    const ribbon = ribbons[i]
+    ctx.beginPath()
+    for (let i = 0; i <= string.numSegments; i++) {
+      const t = (i + 1) / (string.numSegments + 2)
+      const len = 0.01 * t * (1 - t) * 4
+      const p = string.points[i]
+      const n = ribbon.normals[i]
+      ctx.moveTo(p.x, p.z)
+      ctx.lineTo(p.x + len * n.x, p.z + len * n.z)
+    }
+    for (let i = 0; i <= string.numSegments; i++) {
+      const t = (i + 1) / (string.numSegments + 2)
+      const len = 0.01 * t * (1 - t) * 4
+      const p = string.points[i]
+      const n = ribbon.normals[i]
+      const x = p.x + len * n.x
+      const y = p.z + len * n.z
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)
+    }
+    ctx.stroke()
+  })
+
   const sum = strings.map(s => s.points[0]).reduce((a, b) => ({ x: a.x + b.x, y: a.y + b.y, z: a.z + b.z }))
   ctx.font = '0.02px sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
+  ctx.globalAlpha = 1
   ctx.fillText('くらげ', sum.x / strings.length, sum.z / strings.length)
-
   ctx.restore()
 }
 function frame() {
@@ -65,7 +94,4 @@ function frame() {
 }
 requestAnimationFrame(frame)
 
-
-assignGlobal({
-  strings
-})
+assignGlobal({ strings })

@@ -1,4 +1,4 @@
-import { Point3D, dot, solveTridiagonal, cross, weightedSum } from './math'
+import { Point3D, dot, solveTridiagonal, cross, weightedSum, normalize } from './math'
 export class String3D {
   segmentLength: number
   directions: Point3D[] = []
@@ -117,5 +117,39 @@ export class String3D {
     F.forEach(f => {
       f.x = f.y = f.z = 0
     })
+  }
+}
+
+export class Ribbon {
+  normals: Point3D[] = []
+  constructor(public numSegments: number) {
+    const { normals } = this
+    for (let i = 0; i <= numSegments; i++) {
+      normals.push({ x: 0, y: 0, z: 1 })
+    }
+  }
+  fill({ x, y, z }: Point3D) {
+    this.normals.forEach(d => {
+      d.x = x
+      d.y = y
+      d.z = z
+    })
+  }
+  update({ x, y, z }: Point3D, directions: Point3D[], rate: number) {
+    const { normals, numSegments } = this
+    const start = normals[0]
+    start.x = x
+    start.y = y
+    start.z = z
+    let prev = { x, y, z }
+    for (let i = 1; i <= numSegments; i++) {
+      const dir = i < numSegments ? normalize(weightedSum(1, directions[i - 1], 1, directions[i])) : directions[i - 1]
+      const normal = normals[i]
+      const pnorm = normalize(weightedSum(1, prev, -dot(prev, dir), dir))
+      prev = normalize(weightedSum(rate, pnorm, 1 - rate, normal))
+      normal.x = prev.x
+      normal.y = prev.y
+      normal.z = prev.z
+    }
   }
 }
