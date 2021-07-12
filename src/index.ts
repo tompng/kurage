@@ -21,15 +21,18 @@ function update(){
   const dt = 0.001
   strings.forEach((string, i) => {
     const point = string.points[0]
+    const v = string.velocities[0]
+    const vf = 10
     const targetx = mouse.x + Math.sin(i) * 0.02
     const targetz = mouse.y + Math.cos(i) * 0.02
     const t = performance.now() * (1 + Math.sin(i) % 0.1) / 1000
     const f = {
-      x: (targetx - point.x) * 100 + Math.sin(0.5 * t),
-      y: Math.sin(0.6 * t),
-      z: (targetz - point.z) * 100 + Math.sin(0.7 * t)
+      x: (targetx - point.x) * 100 + Math.sin(0.5 * t) - vf * v.x,
+      y: Math.sin(0.6 * t) - vf * v.y,
+      z: (targetz - point.z) * 100 + Math.sin(0.7 * t) - vf * v.z
     }
-    string.addForce(10, 10)
+    string.addHardnessForce(10, 10)
+    string.addForce(10, 4)
     string.update(f, dt)
   })
 }

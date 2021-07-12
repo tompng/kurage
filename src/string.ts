@@ -1,4 +1,4 @@
-import { Point3D, dot, solveTridiagonal } from './math'
+import { Point3D, dot, solveTridiagonal, cross, weightedSum } from './math'
 export class String3D {
   segmentLength: number
   directions: Point3D[] = []
@@ -28,6 +28,34 @@ export class String3D {
       z += segmentLength * dir.z
       points[i + 1] = { x, y, z }
     })
+  }
+
+  addHardnessForce(hardness: number, decay: number) {
+    const { F, directions, velocities, numSegments } = this
+    for (let i = 1; i < numSegments; i++) {
+      const v = velocities[i]
+      const va = weightedSum(1, velocities[i - 1], -1, v)
+      const vb = weightedSum(1, velocities[i + 1], -1, v)
+      const da = directions[i - 1]
+      const db = directions[i]
+      const prot = cross(da, db)
+      const vrot = weightedSum(1, cross(da, va), 1, cross(db, vb))
+      const rot = weightedSum(hardness, prot, decay, vrot)
+      const rfa = cross(rot, da)
+      const rfb = cross(rot, db)
+      const fa = F[i - 1]
+      const f = F[i]
+      const fb = F[i + 1]
+      fa.x -= rfa.x
+      fa.y -= rfa.y
+      fa.z -= rfa.z
+      f.x += rfa.x + rfb.x
+      f.y += rfa.y + rfb.y
+      f.z += rfa.z + rfb.z
+      fb.x -= rfb.x
+      fb.y -= rfb.y
+      fb.z -= rfb.z
+    }
   }
 
   addForce(gravity: number, friction: number) {
