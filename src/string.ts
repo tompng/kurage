@@ -3,34 +3,46 @@ export class String3D {
   segmentLength: number
   directions: Point3D[] = []
   velocities: Point3D[] = []
-  startPoint: Point3D = { x: 0, y: 0, z: 0 }
+  points: Point3D[] = []
+  F: Point3D[] = []
   constructor(public numSegments: number, public length: number) {
     this.segmentLength = length / numSegments
+    const { directions, velocities, F } = this
     for (let i = 0; i < numSegments; i++) {
-      this.directions.push({ x: 1, y: 0, z: 0 })
+      directions.push({ x: 1, y: 0, z: 0 })
     }
     for (let i = 0; i <= numSegments; i++) {
-      this.velocities.push({ x: 0, y: 0, z: 0 })
+      F.push({ x: 0, y: 0, z: 0 })
+      velocities.push({ x: 0, y: 0, z: 0 })
     }
+    this.points[0] = { x: 0, y: 0, z: 0 }
+    this.calcPoints()
   }
 
-  getPoints() {
-    const { segmentLength } = this
-    let { x, y, z } = this.startPoint
-    const points: Point3D[] = [{ x, y, z }]
-    this.directions.forEach(dir => {
+  calcPoints() {
+    const { points, segmentLength } = this
+    let { x, y, z } = this.points[0]
+    this.directions.forEach((dir, i) => {
       x += segmentLength * dir.x
       y += segmentLength * dir.y
       z += segmentLength * dir.z
-      points.push({ x, y, z })
+      points[i + 1] = { x, y, z }
     })
-    return points
   }
-  
+
+  addForce(gravity: number, friction: number) {
+    const { F, velocities, numSegments } = this
+    for (let i = 0; i <= numSegments; i++) {
+      const v = velocities[i]
+      const f = F[i]
+      f.x -= v.x * friction
+      f.y -= v.y * friction
+      f.z -= v.z * friction - gravity / numSegments
+    }
+  }
+
   update(fStart: Point3D, dt = 0.001) {
-    const points = this.getPoints()
-    const { velocities, directions, numSegments, segmentLength } = this
-    const F: Point3D[] = this.velocities.map(v => ({ x: -v.x * 10, y: -v.y * 10, z: -v.z * 10 - 1 / numSegments }))
+    const { F, points, velocities, directions, numSegments, segmentLength } = this
     const ta: number[] = []
     const tt: number[] = []
     const tb: number[] = []
@@ -51,33 +63,31 @@ export class String3D {
     }
     solveTridiagonal(ta, tt, tb, T)
     for (let i = 0; i <= numSegments; i++) {
-      velocities[i].x += dt * (F[i].x + (i > 0 ? T[i - 1] * directions[i - 1].x : 0) - (i < numSegments ? T[i] * directions[i].x : 0))
-      velocities[i].y += dt * (F[i].y + (i > 0 ? T[i - 1] * directions[i - 1].y : 0) - (i < numSegments ? T[i] * directions[i].y : 0))
-      velocities[i].z += dt * (F[i].z + (i > 0 ? T[i - 1] * directions[i - 1].z : 0) - (i < numSegments ? T[i] * directions[i].z : 0))
+      const f = F[i]
+      velocities[i].x += dt * (f.x + (i > 0 ? T[i - 1] * directions[i - 1].x : 0) - (i < numSegments ? T[i] * directions[i].x : 0))
+      velocities[i].y += dt * (f.y + (i > 0 ? T[i - 1] * directions[i - 1].y : 0) - (i < numSegments ? T[i] * directions[i].y : 0))
+      velocities[i].z += dt * (f.z + (i > 0 ? T[i - 1] * directions[i - 1].z : 0) - (i < numSegments ? T[i] * directions[i].z : 0))
     }
-    const points2 = points.map(({ x, y, z }, i) => ({
-      x: x + dt * velocities[i].x,
-      y: y + dt * velocities[i].y,
-      z: z + dt * velocities[i].z
-    }))
-    for (let i = 0; i < numSegments; i++) {
-      const p = points2[i]
-      const q = points2[i + 1]
-      const dx = q.x - p.x
-      const dy = q.y - p.y
-      const dz = q.z - p.z
-      const dr = Math.hypot(dx, dy, dz)
-      directions[i].x = dx / dr
-      directions[i].y = dy / dr
-      directions[i].z = dz / dr
-      const dir = directions[i]
-      points2[i + 1].x = p.x + dir.x * segmentLength
-      points2[i + 1].y = p.y + dir.y * segmentLength
-      points2[i + 1].z = p.z + dir.z * segmentLength
-    }
+    const p0 = points[0]
     const v0 = velocities[0]
-    this.startPoint.x += v0.x * dt
-    this.startPoint.y += v0.y * dt
-    this.startPoint.z += v0.z * dt
+    p0.x += dt * v0.x
+    p0.y += dt * v0.y
+    p0.z += dt * v0.z
+    for (let i = 1; i <= numSegments; i++) {
+      const p = points[i - 1]
+      const q = points[i]
+      const v = velocities[i]
+      const dx = q.x + dt * v.x - p.x
+      const dy = q.y + dt * v.y - p.y
+      const dz = q.z + dt * v.z - p.z
+      const dr = Math.hypot(dx, dy, dz)
+      const dir = directions[i - 1]
+      q.x = p.x + (dir.x = dx / dr) * segmentLength
+      q.y = p.y + (dir.y = dy / dr) * segmentLength
+      q.z = p.z + (dir.z = dz / dr) * segmentLength
+    }
+    F.forEach(f => {
+      f.x = f.y = f.z = 0
+    })
   }
 }

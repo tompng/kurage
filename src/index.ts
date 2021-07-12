@@ -14,18 +14,22 @@ document.body.onmousemove = e => {
 
 const strings = [...new Array(10)].map(() => {
   const string = new String3D(100, 0.2 + 0.2 * Math.random())
-  string.startPoint.x = 0.5
-  string.startPoint.z = 0.5
   return string
 })
 
 function update(){
   const dt = 0.001
   strings.forEach((string, i) => {
-    const point = string.startPoint
+    const point = string.points[0]
     const targetx = mouse.x + Math.sin(i) * 0.02
     const targetz = mouse.y + Math.cos(i) * 0.02
-    const f = { x: (targetx - point.x) * 100, y: Math.sin(performance.now() / 1000), z: (targetz - point.z) * 100 }
+    const t = performance.now() * (1 + Math.sin(i) % 0.1) / 1000
+    const f = {
+      x: (targetx - point.x) * 100 + Math.sin(0.5 * t),
+      y: Math.sin(0.6 * t),
+      z: (targetz - point.z) * 100 + Math.sin(0.7 * t)
+    }
+    string.addForce(10, 10)
     string.update(f, dt)
   })
 }
@@ -37,13 +41,13 @@ function render() {
   ctx.scale(canvas.width, canvas.height)
   ctx.lineWidth = 0.001
   strings.forEach(string => {
-    const [start, ...points] = string.getPoints()
+    const [startPoint, ...restPoints] = string.points
     ctx.beginPath()
-    ctx.moveTo(start.x, start.z)
-    points.forEach(({ x, z }) => ctx.lineTo(x, z))
+    ctx.moveTo(startPoint.x, startPoint.z)
+    restPoints.forEach(({ x, z }) => ctx.lineTo(x, z))
     ctx.stroke()
   })
-  const sum = strings.map(s => s.startPoint).reduce((a, b) => ({ x: a.x + b.x, y: a.y + b.y, z: a.z + b.z }))
+  const sum = strings.map(s => s.points[0]).reduce((a, b) => ({ x: a.x + b.x, y: a.y + b.y, z: a.z + b.z }))
   ctx.font = '0.02px sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
