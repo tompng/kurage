@@ -118,6 +118,13 @@ export class String3D {
       f.x = f.y = f.z = 0
     })
   }
+  renderToCanvas(ctx: CanvasRenderingContext2D) {
+    const [startPoint, ...restPoints] = this.points
+    ctx.beginPath()
+    ctx.moveTo(startPoint.x, startPoint.z)
+    restPoints.forEach(({ x, z }) => ctx.lineTo(x, z))
+    ctx.stroke()
+  }
 }
 
 export class Ribbon {
@@ -151,5 +158,28 @@ export class Ribbon {
       normal.y = prev.y
       normal.z = prev.z
     }
+  }
+  renderToCanvas(ctx: CanvasRenderingContext2D, string: String3D, width: number) {
+    const { points } = string
+    const { normals, numSegments } = this
+    ctx.beginPath()
+    for (let i = 0; i <= numSegments; i++) {
+      const t = (i + 1) / (numSegments + 2)
+      const len = width * t * (1 - t) * 4
+      const p = points[i]
+      const n = normals[i]
+      ctx.moveTo(p.x, p.z)
+      ctx.lineTo(p.x + len * n.x, p.z + len * n.z)
+    }
+    for (let i = 0; i <= numSegments; i++) {
+      const t = (i + 1) / (numSegments + 2)
+      const len = width * t * (1 - t) * 4
+      const p = points[i]
+      const n = normals[i]
+      const x = p.x + len * n.x
+      const y = p.z + len * n.z
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)
+    }
+    ctx.stroke()
   }
 }
