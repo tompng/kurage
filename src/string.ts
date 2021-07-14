@@ -5,7 +5,7 @@ export class String3D {
   velocities: Point3D[] = []
   points: Point3D[] = []
   F: Point3D[] = []
-  constructor(public numSegments: number, public length: number) {
+  constructor(public numSegments: number, public length: number, public startPointWeight: number, public weight: number) {
     this.segmentLength = length / numSegments
     const { directions, velocities, F } = this
     for (let i = 0; i < numSegments; i++) {
@@ -31,7 +31,8 @@ export class String3D {
   }
 
   addHardnessForce(hardness: number, decay: number) {
-    const { F, directions, velocities, numSegments } = this
+    const { F, directions, velocities, weight, numSegments } = this
+    const w = weight / numSegments
     for (let i = 1; i < numSegments; i++) {
       const v = velocities[i]
       const va = weightedSum(1, velocities[i - 1], -1, v)
@@ -40,7 +41,7 @@ export class String3D {
       const db = directions[i]
       const prot = cross(da, db)
       const vrot = weightedSum(1, cross(da, va), 1, cross(db, vb))
-      const rot = weightedSum(hardness, prot, decay, vrot)
+      const rot = weightedSum(hardness * w, prot, decay * w, vrot)
       const rfa = cross(rot, da)
       const rfb = cross(rot, db)
       const fa = F[i - 1]
@@ -59,42 +60,46 @@ export class String3D {
   }
 
   addForce(gravity: number, friction: number) {
-    const { F, velocities, numSegments } = this
-    for (let i = 0; i <= numSegments; i++) {
+    const { F, velocities, numSegments, weight } = this
+    const w = weight / numSegments
+    for (let i = 1; i <= numSegments; i++) {
       const v = velocities[i]
       const f = F[i]
-      f.x -= v.x * friction
-      f.y -= v.y * friction
-      f.z -= v.z * friction - gravity / numSegments
+      f.x -= v.x * friction * w
+      f.y -= v.y * friction * w
+      f.z -= (v.z * friction - gravity) * w
     }
   }
 
   update(fStart: Point3D, dt = 0.001) {
-    const { F, points, velocities, directions, numSegments, segmentLength } = this
+    const { F, points, velocities, directions, numSegments, weight, startPointWeight, segmentLength } = this
+    const pointWeight = weight / numSegments
     const ta: number[] = []
     const tt: number[] = []
     const tb: number[] = []
     const T: number[] = []
-    F[0].x += fStart.x * numSegments
-    F[0].y += fStart.y * numSegments
-    F[0].z += fStart.z * numSegments
+    F[0].x += fStart.x
+    F[0].y += fStart.y
+    F[0].z += fStart.z
     for (let i = 0; i < numSegments; i++) {
-      // vnext[i] = v[i] + dt * (F[i] + T[i - 1] * dir[i - 1] - T[i]*dir[i])
+      // vnext[i] = v[i] + dt * (F[i] + T[i - 1] * dir[i - 1] - T[i]*dir[i]) / weight
       // constraints: dot(vnext[i + 1] - vnext[i], dir[i]) = 0
       const dir = directions[i]
-      const vfdot1 = dot(velocities[i], dir) + dt * dot(F[i], dir)
-      const vfdot2 = dot(velocities[i + 1], dir) + dt * dot(F[i + 1], dir)
-      tt[i] = 2
-      ta[i] = i > 0 ? -dot(directions[i - 1], dir) : 0
-      tb[i] = i < numSegments - 1 ? -dot(directions[i + 1], dir) : 0
+      const prevPointWeight = i === 0 ? startPointWeight : pointWeight
+      const vfdot1 = dot(velocities[i], dir) + dt * dot(F[i], dir) / prevPointWeight
+      const vfdot2 = dot(velocities[i + 1], dir) + dt * dot(F[i + 1], dir) / pointWeight
+      tt[i] = 1 / prevPointWeight + 1 / pointWeight
+      ta[i] = i > 0 ? -dot(directions[i - 1], dir) / prevPointWeight : 0
+      tb[i] = i < numSegments - 1 ? -dot(directions[i + 1], dir) / pointWeight : 0
       T[i] = (vfdot1 - vfdot2) / dt
     }
     solveTridiagonal(ta, tt, tb, T)
     for (let i = 0; i <= numSegments; i++) {
       const f = F[i]
-      velocities[i].x += dt * (f.x + (i > 0 ? T[i - 1] * directions[i - 1].x : 0) - (i < numSegments ? T[i] * directions[i].x : 0))
-      velocities[i].y += dt * (f.y + (i > 0 ? T[i - 1] * directions[i - 1].y : 0) - (i < numSegments ? T[i] * directions[i].y : 0))
-      velocities[i].z += dt * (f.z + (i > 0 ? T[i - 1] * directions[i - 1].z : 0) - (i < numSegments ? T[i] * directions[i].z : 0))
+      const w = i === 0 ? startPointWeight : weight / numSegments
+      velocities[i].x += dt * (f.x + (i > 0 ? T[i - 1] * directions[i - 1].x : 0) - (i < numSegments ? T[i] * directions[i].x : 0)) / w
+      velocities[i].y += dt * (f.y + (i > 0 ? T[i - 1] * directions[i - 1].y : 0) - (i < numSegments ? T[i] * directions[i].y : 0)) / w
+      velocities[i].z += dt * (f.z + (i > 0 ? T[i - 1] * directions[i - 1].z : 0) - (i < numSegments ? T[i] * directions[i].z : 0)) / w
     }
     const p0 = points[0]
     const v0 = velocities[0]
