@@ -1,5 +1,5 @@
 import { Point3D } from './math'
-import type { String3D } from './string'
+import type { String3D, Ribbon } from './string'
 type ShapeParam = {
   size: number
   theta1: number
@@ -37,6 +37,8 @@ function genLink(a: JellyPoint, b: JellyPoint, k: number): JellyLink {
 export class Jelly {
   innerStrings: String3D[] = []
   outerStrings: String3D[] = []
+  innerRibbons: Ribbon[] = []
+  outerRibbons: Ribbon[] = []
   topPoint = genPoint(0, 0, 0)
   middlePoints: JellyPoint[] = []
   outerPoints: JellyPoint[] = []
@@ -45,23 +47,26 @@ export class Jelly {
   links: JellyLink[] = []
   shrinkRadialLinks: JellyLink[] = []
   shrinkOutlineLinks: JellyLink[] = []
-  pointStrings: { p: JellyPoint; s: String3D }[] = []
+  pointStrings: { p: JellyPoint; s: String3D; r: Ribbon | null }[] = []
   constructor(public numInner: number, public numOuter: number, public shape: ShapeParam, public hardness: HardnessParam) {
     this.setInitialPosition()
     this.setLinks()
   }
-  assignStrings(innerStrings: String3D[], outerStrings: String3D[]) {
+  assignStrings(innerStrings: String3D[], innerRibbons: Ribbon[], outerStrings: String3D[], outerRibbons: Ribbon[]) {
     const { pointStrings, numInner, numOuter, innerPoints, outerPoints } = this
     this.innerStrings = innerStrings
+    this.innerRibbons = innerRibbons
     this.outerStrings = outerStrings
-    this.pointStrings = []
+    this.outerRibbons = outerRibbons
     innerStrings.forEach((s, i) => {
-      const p = innerPoints[i * numInner % innerStrings.length]
-      pointStrings.push({ p, s })
+      const p = innerPoints[Math.round(i * numInner / innerStrings.length) % innerPoints.length]
+      const r = innerRibbons[i] ?? null
+      pointStrings.push({ p, s, r })
     })
     outerStrings.forEach((s, i) => {
-      const p = outerPoints[i * numOuter % outerStrings.length]
-      pointStrings.push({ p, s })
+      const p = outerPoints[Math.round(i * numOuter / outerStrings.length) % outerPoints.length]
+      const r = outerRibbons[i] ?? null
+      pointStrings.push({ p, s, r })
     })
     pointStrings.forEach(({ s, p: { p: { x, y, z } } }) => {
       const l = s.segmentLength
@@ -114,13 +119,13 @@ export class Jelly {
   resetForce() {
     this.points.forEach(p => { p.f.x = p.f.y = p.f.z = 0 })
   }
-  updateForce(links: JellyLink[], ratio: number) {
+  updateForce(links: JellyLink[], muscle: number, ratio: number) {
     links.forEach(({ a, b, r, k }) => {
       const dx = b.p.x - a.p.x
       const dy = b.p.y - a.p.y
       const dz = b.p.z - a.p.z
       const distance = Math.hypot(dx, dy, dz)
-      const scale = (distance - r * ratio) * k / distance
+      const scale = k * ((distance - r) / r * (1 - muscle) + (distance - r * ratio) / r * muscle)/ distance
       const dvx = b.v.x - a.v.x
       const dvy = b.v.y - a.v.y
       const dvz = b.v.z - a.v.z
@@ -134,9 +139,9 @@ export class Jelly {
     })
   }
   update(dt: number, muscle: number) {
-    this.updateForce(this.links, 1)
-    this.updateForce(this.shrinkRadialLinks, (2 + muscle) / 3)
-    this.updateForce(this.shrinkOutlineLinks, muscle)
+    this.updateForce(this.links, 0, 1)
+    this.updateForce(this.shrinkRadialLinks, muscle, 1)
+    this.updateForce(this.shrinkOutlineLinks, muscle, 0.5)
     this.points.forEach(({ p, v, f }) => {
       v.x += f.x * dt
       v.y += f.y * dt
@@ -145,8 +150,12 @@ export class Jelly {
       p.y += v.y * dt
       p.z += v.z * dt
     })
-    this.pointStrings.forEach(({ p, s }) => {
-      s.update(p.f, dt)
+    this.pointStrings.forEach(({ p, s, r }) => {
+      const fscale = 1
+      const f = { x: p.f.x * fscale, y: p.f.y * fscale, z: p.f.z * fscale }
+      s.addHardnessForce(10, 10)
+      s.addForce(0, 4)
+      s.update(f, dt)
       const pos = s.points[0]
       const v = s.velocities[0]
       p.v.x = v.x
@@ -165,5 +174,19 @@ export class Jelly {
       ctx.lineTo(b.p.x, b.p.z)
     })
     ctx.stroke()
+    this.pointStrings.forEach(({ s }) => s.renderToCanvas(ctx))
+    ;([
+      [[this.topPoint], 'rgba(255,128,0,0.5)'],
+      [this.innerPoints, 'rgba(255,0,0,0.5)'],
+      [this.middlePoints, 'rgba(0,255,0,0.5)'],
+      [this.outerPoints, 'rgba(0,0,255,0.5)']
+    ] as const).forEach(([points, color]) => {
+      ctx.fillStyle = color
+      points.forEach(p => {
+        ctx.beginPath()
+        ctx.arc(p.p.x, p.p.z, this.shape.size / 40, 0, 2 * Math.PI)
+        ctx.fill()
+      })
+    })
   }
 }
