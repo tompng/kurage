@@ -73,10 +73,10 @@ export class String3D {
     }
   }
 
-  update(
+  update<T extends { first?: Point3D }>(
     dt: number,
-    constraints: { first?: Point3D } = {}
-  ) {
+    constraints?: T
+  ): T {
     const { F, points, velocities, directions, numSegments, weights, segmentLength } = this
     const ta: number[] = []
     const tt: number[] = []
@@ -96,7 +96,7 @@ export class String3D {
       T[i] = (vfdot1 - vfdot2) / dt
     }
     const output = { ...constraints }
-    if (constraints.first) {
+    if (constraints?.first) {
       // vnext[0] = v[0] + dt * (F[0] - T[0] * dir[0] + F0) / weight = (dst[0] - p[0]) / dt
       // vnext[1] = v[1] + dt * (F[1] + T[0] * dir[0] - T[1] * dir[1]) / weight
       // constraints: dot(vnext[1], dir[0]) = dot(vnext[0], dir[0])
@@ -152,6 +152,7 @@ export class String3D {
     F.forEach(f => {
       f.x = f.y = f.z = 0
     })
+    return output
   }
   renderToCanvas(ctx: CanvasRenderingContext2D) {
     const [startPoint, ...restPoints] = this.points

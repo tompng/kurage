@@ -28,14 +28,9 @@ const jelly = new Jelly(4, 20, {
   innerDistance: 0.03,
   innerRadius: 0.02
 }, {
-  inner: 200,
-  topInner: 200,
-  outer: 100,
-  middle: 10,
-  topMiddle: 10,
-  innerMiddle: 10,
-  innerOuter: 40,
-  middleOuter: 10
+  core: 200,
+  radial: 10,
+  arc: 10
 })
 jelly.points.forEach(({ p }) => {
   p.x += 0.5
@@ -52,10 +47,12 @@ function update(){
     const dx = mouse.x - point.p.x
     const dz = mouse.y - point.p.z
     const f = point === jelly.topPoint ? 1000 : 0
-    point.f.x = f * dx - point.v.x / 10
-    point.f.y = - point.v.y / 10
-    point.f.z = f * dz - point.v.z / 10
+    point.f.x = f * dx// - point.v.x / 10
+    // point.f.y = -point.v.y / 10
+    point.f.z = f * dz// - point.v.z / 10
   })
+
+  jelly.pullTo({ x: mouse.x, y: 0, z: mouse.y }, 0.01)
 
   jelly.update(dt, (1 - Math.cos(performance.now() / 1000)) / 2)
 }
