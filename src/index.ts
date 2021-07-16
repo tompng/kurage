@@ -21,20 +21,13 @@ const shortStrings = [...new Array(10)].map(() => new String3D(20, 0.1 + 0.01 * 
 const ribbons = strings.map(s => new Ribbon(s.numSegments))
 
 
-const jelly = new Jelly(4, 20, {
-  size: 0.1,
+const jelly = new Jelly(20, {
+  size: 1,
   theta1: 0.3,
-  theta2: 0.8,
-  innerDistance: 0.03,
-  innerRadius: 0.02
+  theta2: 0.8
 }, {
-  core: 200,
   radial: 10,
   arc: 10
-})
-jelly.points.forEach(({ p }) => {
-  p.x += 0.5
-  p.z += 0.5
 })
 
 jelly.assignStrings(
@@ -42,28 +35,17 @@ jelly.assignStrings(
 )
 
 function update(){
-  const dt = 0.001
-  jelly.points.forEach(point => {
-    const dx = mouse.x - point.p.x
-    const dz = mouse.y - point.p.z
-    const f = point === jelly.topPoint ? 1000 : 0
-    point.f.x = f * dx// - point.v.x / 10
-    // point.f.y = -point.v.y / 10
-    point.f.z = f * dz// - point.v.z / 10
-  })
-
+  const dt = 0.005
   jelly.pullTo({ x: mouse.x, y: 0, z: mouse.y }, 0.01)
-
-  jelly.update(dt, (1 - Math.cos(performance.now() / 1000)) / 2)
+  jelly.update(dt, (1 - Math.cos(performance.now() / 1000)) / 4)
 }
-
 
 function render() {
   const ctx = canvas.getContext('2d')!
   ctx.save()
   ctx.clearRect(0, 0, canvas.width, canvas.height)
   ctx.scale(canvas.width, canvas.height)
-  ctx.lineWidth = 0.001
+  ctx.lineWidth = 0.002
   jelly.renderToCanvas(ctx)
 
   ctx.restore()

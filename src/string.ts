@@ -75,7 +75,7 @@ export class String3D {
 
   update<T extends { first?: Point3D }>(
     dt: number,
-    constraints?: T
+    constraints: T
   ): T {
     const { F, points, velocities, directions, numSegments, weights, segmentLength } = this
     const ta: number[] = []
@@ -195,21 +195,23 @@ export class Ribbon {
       normal.z = prev.z
     }
   }
-  renderToCanvas(ctx: CanvasRenderingContext2D, string: String3D, width: number) {
+  renderToCanvas(ctx: CanvasRenderingContext2D, string: String3D, width: number[]) {
     const { points } = string
     const { normals, numSegments } = this
+    const w0 = width[0] || 0
+    const w2 = width[2] ?? width[1] ?? w0
+    const w1 = width[2] ? width[1] : (w2 + w0) / 2
     ctx.beginPath()
+    const widthAt = (t: number) => w0 + (w2 - w0) * t + (2 * w1 - w2 - w0) * t * (1 - t) * 2
     for (let i = 0; i <= numSegments; i++) {
-      const t = (i + 1) / (numSegments + 2)
-      const len = width * t * (1 - t) * 4
+      const len = widthAt((i + 1) / (numSegments + 2))
       const p = points[i]
       const n = normals[i]
       ctx.moveTo(p.x, p.z)
       ctx.lineTo(p.x + len * n.x, p.z + len * n.z)
     }
     for (let i = 0; i <= numSegments; i++) {
-      const t = (i + 1) / (numSegments + 2)
-      const len = width * t * (1 - t) * 4
+      const len = widthAt((i + 1) / (numSegments + 2))
       const p = points[i]
       const n = normals[i]
       const x = p.x + len * n.x

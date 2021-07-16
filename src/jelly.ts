@@ -1,5 +1,6 @@
 import {
   Point3D, Matrix3, distance, cross,
+  normalize as vectorNormalize,
   length as vectorLength,
   scale as vectorScale,
   add as vectorAdd,
@@ -10,23 +11,27 @@ type ShapeParam = {
   size: number
   theta1: number
   theta2: number
-  innerDistance: number
-  innerRadius: number
 }
 type HardnessParam = {
-  core: number
   arc: number
   radial: number
 }
 
-type JellyPoint = { p: Point3D; v: Point3D; f: Point3D }
+type JellyPoint = { th: number; r: 0 | 1 | 2; p: Point3D; v: Point3D; f: Point3D }
 type JellyLink = { a: JellyPoint; b: JellyPoint; r: number; k: number }
 
-function genPoint(x: number, y: number, z: number): JellyPoint {
-  return {
-    p: { x, y, z },
-    v: { x: 0, y: 0, z: 0 },
-    f: { x: 0, y: 0, z: 0 }
+function toRZ(rtype: 0 | 1 | 2, { size, theta1, theta2 }: ShapeParam, shrink: number) {
+  const z = size * (Math.sin(theta1) + Math.sin(theta2)) / 2
+  const c1 = Math.cos(theta1 + shrink / 2)
+  const s1 = Math.sin(theta1 + shrink / 2)
+  const c2 = Math.cos(theta2 + shrink)
+  const s2 = Math.sin(theta2 + shrink)
+  if (rtype === 0) {
+    return { r: 0, z: z }
+  } if (rtype === 1) {
+    return { r: size * c1, z: z - size * s1 }
+  } else {
+    return { r: size * (c1 + c2), z: z - size * (s1 + s2) }
   }
 }
 
@@ -42,124 +47,112 @@ export class Jelly {
   velocity: Point3D = { x: 0, y: 0, z: 0 }
   momentum: Point3D = { x: 0, y: 0, z: 0 }
 
-  innerStrings: String3D[] = []
-  outerStrings: String3D[] = []
-  innerRibbons: Ribbon[] = []
-  outerRibbons: Ribbon[] = []
-  topPoint = genPoint(0, 0, 0)
-  middlePoints: JellyPoint[] = []
-  outerPoints: JellyPoint[] = []
+  topPoint: JellyPoint
   innerPoints: JellyPoint[] = []
+  outerPoints: JellyPoint[] = []
+
   points: JellyPoint[] = []
   links: JellyLink[] = []
-  shrinkRadialLinks: JellyLink[] = []
-  shrinkOutlineLinks: JellyLink[] = []
   pointStrings: { p: JellyPoint; s: String3D; r: Ribbon | null }[] = []
   coreStrings: { p: Point3D; s: String3D; r: Ribbon | null }[] = []
-  constructor(public numInner: number, public numOuter: number, public shape: ShapeParam, public hardness: HardnessParam) {
+  constructor(public numSegments: number, public shape: ShapeParam, public hardness: HardnessParam) {
+    this.topPoint = this.calcPoint(0, 0)
     this.setInitialPosition()
+    console.log('p', this.topPoint.p, this.points[10].p)
     this.setLinks()
   }
+
+  calcPoint(rtype: 0 | 1 | 2, th: number): JellyPoint {
+    const { r: radius, z } = toRZ(rtype, this.shape, 0)
+    const x = radius * Math.cos(th)
+    const y = radius* Math.sin(th)
+    return {
+      r: rtype,
+      th,
+      p: this.transformLocalPoint({ x, y, z }),
+      v: { x: 0, y: 0, z: 0 },
+      f: { x: 0, y: 0, z: 0 }
+    }
+  }
+
   assignStrings(innerStrings: String3D[], innerRibbons: Ribbon[], outerStrings: String3D[], outerRibbons: Ribbon[]) {
+    const { pointStrings, numSegments, outerPoints } = this
     innerStrings.forEach((s, i) => {
       const th = 2 * Math.PI * i / innerStrings.length
-      const p = { x: Math.cos(th), y: Math.sin(th), z: -1 }
-      this.coreStrings.push({ p, s, r: innerRibbons[i] })
+      const r = 0.3
+      const p = { x: r * Math.cos(th), y: r * Math.sin(th), z: -r }
+      this.coreStrings.push({ p, s, r: innerRibbons[i] ?? null })
       const { x, y, z } = this.transformLocalPoint(p)
       s.points[0].x = x
       s.points[0].y = y
       s.points[0].z = z
       s.calcPoints()
     })
-    // const { pointStrings, numInner, numOuter, innerPoints, outerPoints } = this
-    // this.innerStrings = innerStrings
-    // this.innerRibbons = innerRibbons
-    // this.outerStrings = outerStrings
-    // this.outerRibbons = outerRibbons
-    // innerStrings.forEach((s, i) => {
-    //   const p = innerPoints[Math.round(i * numInner / innerStrings.length) % innerPoints.length]
-    //   const r = innerRibbons[i] ?? null
-    //   pointStrings.push({ p, s, r })
-    // })
-    // outerStrings.forEach((s, i) => {
-    //   const p = outerPoints[Math.round(i * numOuter / outerStrings.length) % outerPoints.length]
-    //   const r = outerRibbons[i] ?? null
-    //   pointStrings.push({ p, s, r })
-    // })
-    // pointStrings.forEach(({ s, p: { p: { x, y, z } } }) => {
-    //   const l = s.segmentLength
-    //   s.points.forEach((point, i) => {
-    //     point.x = x
-    //     point.y = y
-    //     point.z = z - i * l
-    //   })
-    // })
-  }
-  setInitialPosition() {
-    const { innerDistance, innerRadius, size, theta1, theta2 } = this.shape
-    const innerPos = { d: innerDistance, r: innerRadius }
-    const middlePos = { d: size * Math.sin(theta1) / 2, r: size * Math.cos(theta1) / 2 }
-    const outerPos = { d: middlePos.d + size * Math.sin(theta2) / 2, r: middlePos.r + size * Math.cos(theta2) / 2 }
-    for (let i = 0; i < this.numInner; i++) {
-      const th = 2 * Math.PI * i / this.numInner
-      const cos = Math.cos(th)
-      const sin = Math.sin(th)
-      this.innerPoints.push(genPoint(innerPos.r * cos, innerPos.r * sin, -innerPos.d))
-    }
-    for (let i = 0; i < this.numOuter; i++) {
-      const th = 2 * Math.PI * i / this.numOuter
-      const cos = Math.cos(th)
-      const sin = Math.sin(th)
-      this.middlePoints.push(genPoint(middlePos.r * cos, middlePos.r * sin, -middlePos.d))
-      this.outerPoints.push(genPoint(outerPos.r * cos, outerPos.r * sin, -outerPos.d))
-    }
-    this.points.push(this.topPoint)
-    ;[this.innerPoints, this.middlePoints, this.outerPoints].forEach(points => {
-      points.forEach(p => this.points.push(p))
+
+    outerStrings.forEach((s, i) => {
+      const p = outerPoints[Math.round(i * numSegments / outerStrings.length) % outerPoints.length]
+      const r = outerRibbons[i] ?? null
+      s.points[0].x = p.p.x
+      s.points[0].y = p.p.y
+      s.points[0].z = p.p.z
+      s.weights[0] = 1
+      s.calcPoints()
+      pointStrings.push({ p, s, r })
     })
   }
-  setLinks() {
-    const { numInner, numOuter, links, shrinkOutlineLinks, shrinkRadialLinks, topPoint, innerPoints, middlePoints, outerPoints, hardness } = this
-    for (let i = 0; i < numInner; i++) {
-      links.push(genLink(topPoint, innerPoints[i], hardness.core))
-      for (let j = i + 1; j < numInner; j++) {
-        links.push(genLink(innerPoints[i], innerPoints[j], hardness.core))
-      }
+  setInitialPosition() {
+    this.points.push(this.topPoint)
+    for (let i = 0; i < this.numSegments; i++) {
+      const th = 2 * Math.PI * i / this.numSegments
+      const inner = this.calcPoint(1, th)
+      const outer = this.calcPoint(2, th)
+      this.points.push(inner, outer)
+      this.innerPoints.push(inner)
+      this.outerPoints.push(outer)
     }
-    for (let i = 0; i < numOuter; i++) {
-      links.push(genLink(topPoint, middlePoints[i], hardness.radial))
-      links.push(genLink(middlePoints[i], middlePoints[(i + 1) % numOuter], hardness.arc))
-      shrinkOutlineLinks.push(genLink(outerPoints[i], outerPoints[(i + 1) % numOuter], hardness.arc))
-      links.push(genLink(middlePoints[i], outerPoints[i], hardness.radial))
-      const inner = innerPoints[Math.round(i * numInner / numOuter) % numInner]
-      links.push(genLink(inner, middlePoints[i], hardness.radial))
-      shrinkRadialLinks.push(genLink(inner, outerPoints[i], hardness.radial))
+  }
+  setLinks() {
+    const { numSegments, links, topPoint, innerPoints, outerPoints, hardness } = this
+    for (let i = 0; i < numSegments; i++) {
+      links.push(genLink(topPoint, innerPoints[i], hardness.radial))
+      links.push(genLink(innerPoints[i], outerPoints[i], hardness.radial))
+      links.push(genLink(innerPoints[i], innerPoints[(i + 1) % numSegments], hardness.arc))
+      links.push(genLink(outerPoints[i], outerPoints[(i + 1) % numSegments], hardness.arc))
     }
   }
   resetForce() {
-    // this.points.forEach(p => { p.f.x = p.f.y = p.f.z = 0 })
+    this.points.forEach(p => { p.f.x = p.f.y = p.f.z = 0 })
   }
-  updateForce(links: JellyLink[], muscle: number, ratio: number) {
-    // const friction = 0.5
-    // this.points.forEach(p => {
-    //   p.f.x -= friction * p.v.x
-    //   p.f.y -= friction * p.v.y
-    //   p.f.z -= friction * p.v.z
-    // })
-    // links.forEach(({ a, b, r, k }) => {
-    //   const dx = b.p.x - a.p.x
-    //   const dy = b.p.y - a.p.y
-    //   const dz = b.p.z - a.p.z
-    //   const distance = Math.hypot(dx, dy, dz)
-    //   const dotv = (dx * (b.v.x - a.v.x) + dy * (b.v.y - a.v.y) + dz * (b.v.z - a.v.z)) / distance
-    //   const scale = k * ((distance - r) / r * (1 - muscle) + (distance - r * ratio) / r * muscle) / distance + k * dotv / distance
-    //   a.f.x += scale * dx
-    //   a.f.y += scale * dy
-    //   a.f.z += scale * dz
-    //   b.f.x -= scale * dx
-    //   b.f.y -= scale * dy
-    //   b.f.z -= scale * dz
-    // })
+  updateForce(links: JellyLink[], shrink: number, dt: number) {
+    const friction = 4
+    this.points.forEach(p => {
+      p.f.x -= friction * p.v.x
+      p.f.y -= friction * p.v.y
+      p.f.z -= friction * p.v.z
+      const { r, z } = toRZ(p.r, this.shape, shrink)
+      const x = r * Math.cos(p.th)
+      const y = r * Math.sin(p.th)
+      const dst = this.transformLocalPoint({ x, y, z })
+      const f = vectorScale(vectorSub(dst, p.p), 100)
+      p.f.x += f.x
+      p.f.y += f.y
+      p.f.z += f.z
+      this.pull(p.p, f, -dt)
+    })
+    links.forEach(({ a, b, r, k }) => {
+      const dx = b.p.x - a.p.x
+      const dy = b.p.y - a.p.y
+      const dz = b.p.z - a.p.z
+      const distance = Math.hypot(dx, dy, dz)
+      const dotv = (dx * (b.v.x - a.v.x) + dy * (b.v.y - a.v.y) + dz * (b.v.z - a.v.z)) / distance
+      const scale = k * (distance - r) / r / distance + k * dotv / distance
+      a.f.x += scale * dx
+      a.f.y += scale * dy
+      a.f.z += scale * dz
+      b.f.x -= scale * dx
+      b.f.y -= scale * dy
+      b.f.z -= scale * dz
+    })
   }
   transformLocalPoint(p: Point3D) {
     return vectorAdd(this.position, vectorScale(this.rotation.transform(p), this.size))
@@ -175,54 +168,50 @@ export class Jelly {
     this.velocity = vectorAdd(this.velocity, vectorScale(f, dt))
     this.momentum = vectorAdd(this.momentum, vectorScale(cross(vectorSub(p, this.position), f), dt / this.size / this.size))
   }
-  update(dt: number, muscle: number) {
+  update(dt: number, shrink: number) {
     this.position =vectorAdd(this.position, vectorScale(this.velocity, dt))
     const w = Matrix3.fromRotation(this.momentum, vectorLength(this.momentum) * dt)
     this.rotation = w.mult(this.rotation)
-    this.coreStrings.forEach(({ p, s }) => {
+    this.coreStrings.forEach(({ p, s, r }) => {
       const gp = this.transformLocalPoint(p)
       s.addHardnessForce(10, 10)
-      s.addForce(0, 10)
+      s.addForce(0, 4)
       const f = s.update(dt, { first: gp }).first
       this.pull(gp, f, -dt)
+      if (r) {
+        const gpc = this.transformLocalPoint({ x: 0, y: 0, z: p.z })
+        const v = vectorNormalize(vectorSub(gpc, gp))
+        r.update(v, s.directions, 10 * dt)
+      }
     })
-
-    // this.updateForce(this.links, 0, 1)
-    // this.updateForce(this.shrinkRadialLinks, muscle, 1)
-    // this.updateForce(this.shrinkOutlineLinks, muscle, 0.8)
-    // this.points.forEach(({ p, v, f }) => {
-    //   v.x += f.x * dt
-    //   v.y += f.y * dt
-    //   v.z += f.z * dt
-    //   p.x += v.x * dt
-    //   p.y += v.y * dt
-    //   p.z += v.z * dt
-    // })
-    // this.pointStrings.forEach(({ p, s, r }) => {
-    //   const fscale = 1
-    //   const f = { x: p.f.x * fscale, y: p.f.y * fscale, z: p.f.z * fscale }
-    //   s.addHardnessForce(10, 10)
-    //   s.addForce(0, 10)
-    //   s.F[0].x += f.x
-    //   s.F[0].y += f.y
-    //   s.F[0].z += f.z
-    //   s.update(dt)
-    //   const pos = s.points[0]
-    //   const v = s.velocities[0]
-    //   p.v.x = v.x
-    //   p.v.y = v.y
-    //   p.v.z = v.z
-    //   p.p.x = pos.x
-    //   p.p.y = pos.y
-    //   p.p.z = pos.z
-    // })
-    // this.resetForce()
+    this.updateForce(this.links, shrink, dt)
+    this.points.forEach(({ p, v, f }) => {
+      v.x += f.x * dt
+      v.y += f.y * dt
+      v.z += f.z * dt
+      p.x += v.x * dt
+      p.y += v.y * dt
+      p.z += v.z * dt
+    })
+    this.pointStrings.forEach(({ p, s }) => {
+      s.addHardnessForce(10, 10)
+      s.addForce(0, 4)
+      s.F[0].x += p.f.x
+      s.F[0].y += p.f.y
+      s.F[0].z += p.f.z
+      s.update(dt, {})
+      p.p.x = s.points[0].x
+      p.p.y = s.points[0].y
+      p.p.z = s.points[0].z
+      p.v.x = s.velocities[0].x
+      p.v.y = s.velocities[0].y
+      p.v.z = s.velocities[0].z
+    })
+    this.resetForce()
   }
   renderToCanvas(ctx: CanvasRenderingContext2D) {
-    const { position, size, rotation } = this
-
     ctx.beginPath()
-    ;[...this.links, ...this.shrinkOutlineLinks, ...this.shrinkRadialLinks].forEach(({ a, b }) => {
+    ;[...this.links].forEach(({ a, b }) => {
       ctx.moveTo(a.p.x, a.p.z)
       ctx.lineTo(b.p.x, b.p.z)
     })
@@ -242,21 +231,24 @@ export class Jelly {
     })
     ctx.stroke()
 
-    this.coreStrings.forEach(({ s }) => {
+    this.coreStrings.forEach(({ s, r }) => {
       s.renderToCanvas(ctx)
+      ctx.save()
+      ctx.globalAlpha = 0.4
+      r?.renderToCanvas(ctx, s, [0.01, 0.02, 0])
+      ctx.restore()
     })
 
     this.pointStrings.forEach(({ s }) => s.renderToCanvas(ctx))
     ;([
       [[this.topPoint], 'rgba(255,128,0,0.5)'],
       [this.innerPoints, 'rgba(255,0,0,0.5)'],
-      [this.middlePoints, 'rgba(0,255,0,0.5)'],
       [this.outerPoints, 'rgba(0,0,255,0.5)']
     ] as const).forEach(([points, color]) => {
       ctx.fillStyle = color
       points.forEach(p => {
         ctx.beginPath()
-        ctx.arc(p.p.x, p.p.z, this.shape.size / 40, 0, 2 * Math.PI)
+        ctx.arc(p.p.x, p.p.z, this.shape.size / 400, 0, 2 * Math.PI)
         ctx.fill()
       })
     })
