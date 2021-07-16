@@ -38,12 +38,22 @@ export function scale(p: Point3D, s: number) {
   return { x: p.x * s, y: p.y * s, z: p.z * s }
 }
 
-export function weightedSum(a: number, pa: Point3D, b: number, pb: Point3D) {
-  return {
-    x: a * pa.x + b * pb.x,
-    y: a * pa.y + b * pb.y,
-    z: a * pa.z + b * pb.z
+export function add(a: Point3D, b: Point3D) {
+  return { x: a.x + b.x, y: a.y + b.y, z: a.z + b.z }
+}
+
+export function sub(a: Point3D, b: Point3D) {
+  return { x: a.x - b.x, y: a.y - b.y, z: a.z - b.z }
+}
+
+export function weightedSum(...elements: [number, Point3D][]) {
+  let x = 0, y = 0, z = 0
+  for (const [n, v] of elements) {
+    x += n * v.x
+    y += n * v.y
+    z += n * v.z
   }
+  return { x, y, z }
 }
 
 export function solveTridiagonal(prev: number[], center: number[], next: number[], v: number[]) {
