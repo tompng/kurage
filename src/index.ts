@@ -9,7 +9,7 @@ canvas.width = 1024
 canvas.height = 1024
 document.body.appendChild(canvas)
 const mouse = { x: 0.5, y: 0.5 }
-document.body.onmousemove = e => {
+document.body.onpointerdown = document.body.onpointermove = e => {
   mouse.x = (e.pageX - canvas.offsetLeft) / canvas.width
   mouse.y = (e.pageY - canvas.offsetTop) / canvas.height
 }
