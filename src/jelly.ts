@@ -62,7 +62,7 @@ export class Jelly {
   genJellyPoint(rtype: 0 | 1 | 2, th: number): JellyPoint {
     const { r: radius, z } = toRZ(rtype, this.shape, 0)
     const x = radius * Math.cos(th)
-    const y = radius* Math.sin(th)
+    const y = radius * Math.sin(th)
     return {
       r: rtype,
       th,
@@ -214,11 +214,26 @@ export class Jelly {
     })
     this.resetForce()
   }
-  topPoint() {
+  topPoint(r = 0, th = 0) {
     const { z } = toRZ(0, this.shape, 0)
-    return this.transformLocalPoint({ x: 0, y: 0, z })
+    return this.transformLocalPoint({ x: r * Math.cos(th), y: r * Math.sin(th), z })
   }
   renderToCanvas(ctx: CanvasRenderingContext2D) {
+    this.coreStrings.forEach(({ s, r }) => {
+      s.renderToCanvas(ctx)
+      ctx.save()
+      ctx.globalAlpha = 0.4
+      r?.renderToCanvas(ctx, s, [0.01, 0.02, 0])
+      ctx.restore()
+    })
+    this.pointStrings.forEach(({ s }) => s.renderToCanvas(ctx))
+    this.drawCurve(ctx)
+    this.renderDebug(ctx)
+  }
+
+  renderDebug(ctx: CanvasRenderingContext2D) {
+    ctx.save()
+    ctx.globalAlpha = 0.2
     const topPoint = this.topPoint()
     ctx.beginPath()
     ;[...this.links].forEach(({ a, b }) => {
@@ -230,7 +245,6 @@ export class Jelly {
       ctx.lineTo(p.x, p.z)
     })
     ctx.stroke()
-
     const coords: Point3D[] = []
     for (let i = 0; i < 8; i++) coords.push({ x: (i & 1) * 2 - 1, y: ((i >> 1) & 1) * 2 - 1, z: ((i >> 2) & 1) * 2 - 1 })
     ctx.beginPath()
@@ -244,31 +258,46 @@ export class Jelly {
       })
     })
     ctx.stroke()
-
-    this.coreStrings.forEach(({ s, r }) => {
-      s.renderToCanvas(ctx)
-      ctx.save()
-      ctx.globalAlpha = 0.4
-      r?.renderToCanvas(ctx, s, [0.01, 0.02, 0])
-      ctx.restore()
-    })
-
-    this.pointStrings.forEach(({ s }) => s.renderToCanvas(ctx))
-    const dotSize = this.shape.size / 400
-    ;([
-      [this.innerPoints, 'rgba(255,0,0,0.5)'],
-      [this.outerPoints, 'rgba(0,0,255,0.5)']
-    ] as const).forEach(([points, color]) => {
-      ctx.fillStyle = color
-      points.forEach(p => {
-        ctx.beginPath()
-        ctx.arc(p.p.x, p.p.z, dotSize, 0, 2 * Math.PI)
-        ctx.fill()
-      })
-    })
-    ctx.beginPath()
-    ctx.fillStyle = 'rgba(255,128,0,0.5)'
-    ctx.arc(topPoint.x, topPoint.z, dotSize, 0, 2 * Math.PI)
-    ctx.fill()
+    ctx.restore()
   }
+
+  drawCurve(ctx: CanvasRenderingContext2D) {
+    const top = this.topPoint()
+    const { numSegments, innerPoints, outerPoints } = this
+    const mix = (a: number, b: number, t: number) => a * (1 - t) + t * b
+    const bez = (a: number, b: number, c: number, d: number, t: number ) => {
+      const m = mix(b, c, t)
+      return mix(mix(mix(a, b, t), m, t), mix(m, mix(c, d, t), t), t)
+    }
+    for (let i = 0; i < numSegments; i++) {
+      const th = 2 * Math.PI * i / numSegments
+      const top2 = this.topPoint(this.shape.size, th)
+      const inner = innerPoints[i].p
+      const outer = outerPoints[i].p
+      ctx.beginPath()
+      ctx.moveTo(top.x, top.z)
+      ctx.bezierCurveTo(top2.x, top2.z, inner.x, inner.z, outer.x, outer.z)
+      ctx.stroke()
+    }
+    for (let i = 0; i < numSegments; i++) {
+      const a = outerPoints[i].p
+      const b = outerPoints[(i + 1) % numSegments].p
+      const c = outerPoints[(i + 2) % numSegments].p
+      const d = outerPoints[(i + 3) % numSegments].p
+      ctx.beginPath()
+      ctx.moveTo(b.x, b.z)
+      ctx.bezierCurveTo(
+        b.x + (c.x - a.x) / 6, b.z + (c.z - a.z) / 6,
+        c.x - (d.x - b.x) / 6, c.z - (d.z - b.z) / 6,
+        c.x, c.z
+      )
+      ctx.stroke()
+    }
+  }
+
+}
+
+type Segment = {
+  theta: number
+  i: number
 }
