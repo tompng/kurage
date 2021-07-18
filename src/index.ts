@@ -36,7 +36,7 @@ jelly.assignStrings(
 
 function update(){
   const dt = 0.005
-  jelly.pullTo({ x: mouse.x, y: 0, z: mouse.y }, 0.01)
+  jelly.pullTo({ x: mouse.x, y: Math.sin(performance.now() / 5000) * 0.02, z: mouse.y }, 0.01)
   jelly.update(dt, (1 - Math.cos(performance.now() / 1000)) / 4)
 }
 

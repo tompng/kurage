@@ -47,7 +47,6 @@ export class Jelly {
   velocity: Point3D = { x: 0, y: 0, z: 0 }
   momentum: Point3D = { x: 0, y: 0, z: 0 }
 
-  topPoint: JellyPoint
   innerPoints: JellyPoint[] = []
   outerPoints: JellyPoint[] = []
 
@@ -56,13 +55,11 @@ export class Jelly {
   pointStrings: { p: JellyPoint; s: String3D; r: Ribbon | null }[] = []
   coreStrings: { p: Point3D; s: String3D; r: Ribbon | null }[] = []
   constructor(public numSegments: number, public shape: ShapeParam, public hardness: HardnessParam) {
-    this.topPoint = this.calcPoint(0, 0)
     this.setInitialPosition()
-    console.log('p', this.topPoint.p, this.points[10].p)
     this.setLinks()
   }
 
-  calcPoint(rtype: 0 | 1 | 2, th: number): JellyPoint {
+  genJellyPoint(rtype: 0 | 1 | 2, th: number): JellyPoint {
     const { r: radius, z } = toRZ(rtype, this.shape, 0)
     const x = radius * Math.cos(th)
     const y = radius* Math.sin(th)
@@ -101,20 +98,18 @@ export class Jelly {
     })
   }
   setInitialPosition() {
-    this.points.push(this.topPoint)
     for (let i = 0; i < this.numSegments; i++) {
       const th = 2 * Math.PI * i / this.numSegments
-      const inner = this.calcPoint(1, th)
-      const outer = this.calcPoint(2, th)
+      const inner = this.genJellyPoint(1, th)
+      const outer = this.genJellyPoint(2, th)
       this.points.push(inner, outer)
       this.innerPoints.push(inner)
       this.outerPoints.push(outer)
     }
   }
   setLinks() {
-    const { numSegments, links, topPoint, innerPoints, outerPoints, hardness } = this
+    const { numSegments, links, innerPoints, outerPoints, hardness } = this
     for (let i = 0; i < numSegments; i++) {
-      links.push(genLink(topPoint, innerPoints[i], hardness.radial))
       links.push(genLink(innerPoints[i], outerPoints[i], hardness.radial))
       links.push(genLink(innerPoints[i], innerPoints[(i + 1) % numSegments], hardness.arc))
       links.push(genLink(outerPoints[i], outerPoints[(i + 1) % numSegments], hardness.arc))
@@ -176,6 +171,16 @@ export class Jelly {
       const gp = this.transformLocalPoint(p)
       s.addHardnessForce(10, 10)
       s.addForce(0, 4)
+      let n = 10
+      for (let i = 0; i < n; i++) {
+        const gp = this.transformLocalPoint(vectorAdd(p, { x: 0, y: 0, z: -i * s.segmentLength / this.size }))
+        const fv = vectorSub(vectorSub(gp, s.points[i]), vectorScale(s.velocities[i], 4 * dt))
+        const f = 400 * (n - i) / n / n
+        s.F[i].x += f * fv.x
+        s.F[i].y += f * fv.y
+        s.F[i].z += f * fv.z
+        this.pull(gp, fv, -f * dt)
+      }
       const f = s.update(dt, { first: gp }).first
       this.pull(gp, f, -dt)
       if (r) {
@@ -209,11 +214,20 @@ export class Jelly {
     })
     this.resetForce()
   }
+  topPoint() {
+    const { z } = toRZ(0, this.shape, 0)
+    return this.transformLocalPoint({ x: 0, y: 0, z })
+  }
   renderToCanvas(ctx: CanvasRenderingContext2D) {
+    const topPoint = this.topPoint()
     ctx.beginPath()
     ;[...this.links].forEach(({ a, b }) => {
       ctx.moveTo(a.p.x, a.p.z)
       ctx.lineTo(b.p.x, b.p.z)
+    })
+    this.innerPoints.forEach(({ p }) => {
+      ctx.moveTo(topPoint.x, topPoint.z)
+      ctx.lineTo(p.x, p.z)
     })
     ctx.stroke()
 
@@ -240,17 +254,21 @@ export class Jelly {
     })
 
     this.pointStrings.forEach(({ s }) => s.renderToCanvas(ctx))
+    const dotSize = this.shape.size / 400
     ;([
-      [[this.topPoint], 'rgba(255,128,0,0.5)'],
       [this.innerPoints, 'rgba(255,0,0,0.5)'],
       [this.outerPoints, 'rgba(0,0,255,0.5)']
     ] as const).forEach(([points, color]) => {
       ctx.fillStyle = color
       points.forEach(p => {
         ctx.beginPath()
-        ctx.arc(p.p.x, p.p.z, this.shape.size / 400, 0, 2 * Math.PI)
+        ctx.arc(p.p.x, p.p.z, dotSize, 0, 2 * Math.PI)
         ctx.fill()
       })
     })
+    ctx.beginPath()
+    ctx.fillStyle = 'rgba(255,128,0,0.5)'
+    ctx.arc(topPoint.x, topPoint.z, dotSize, 0, 2 * Math.PI)
+    ctx.fill()
   }
 }
