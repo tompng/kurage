@@ -16,15 +16,15 @@ document.body.onpointerdown = document.body.onpointermove = e => {
 
 const strings = [...new Array(4)].map(() => new String3D(100, 0.2 + 0.02 * Math.random(), 1, 1))
 
-const shortStrings = [...new Array(10)].map(() => new String3D(20, 0.1 + 0.01 * Math.random(), 1, 1))
+const shortStrings = [...new Array(8)].map(() => new String3D(20, 0.1 + 0.01 * Math.random(), 1, 1))
 
 const ribbons = strings.map(s => new Ribbon(s.numSegments))
 
 
-const jelly = new Jelly(20, {
+const jelly = new Jelly(40, {
   size: 1,
-  theta1: 0.3,
-  theta2: 0.8
+  theta1: 0.2,
+  theta2: 1.4
 }, {
   radial: 10,
   arc: 10
@@ -35,7 +35,7 @@ jelly.assignStrings(
 )
 
 function update(){
-  const dt = 0.005
+  const dt = 0.01
   jelly.pullTo({ x: mouse.x, y: Math.sin(performance.now() / 5000) * 0.02, z: mouse.y }, 0.01)
   jelly.update(dt, (1 - Math.cos(performance.now() / 1000)) / 4)
 }

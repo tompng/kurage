@@ -31,7 +31,7 @@ function toRZ(rtype: 0 | 1 | 2, { size, theta1, theta2 }: ShapeParam, shrink: nu
   } if (rtype === 1) {
     return { r: size * c1, z: z - size * s1 }
   } else {
-    return { r: size * (c1 + c2), z: z - size * (s1 + s2) }
+    return { r: size * (c1 + c2 / 2), z: z - size * (s1 + s2 / 2) }
   }
 }
 
@@ -169,8 +169,8 @@ export class Jelly {
     this.rotation = w.mult(this.rotation)
     this.coreStrings.forEach(({ p, s, r }) => {
       const gp = this.transformLocalPoint(p)
-      s.addHardnessForce(10, 10)
-      s.addForce(0, 4)
+      s.addHardnessForce(8, 8)
+      s.addForce(0, 0.5)
       let n = 10
       for (let i = 0; i < n; i++) {
         const gp = this.transformLocalPoint(vectorAdd(p, { x: 0, y: 0, z: -i * s.segmentLength / this.size }))
@@ -199,8 +199,8 @@ export class Jelly {
       p.z += v.z * dt
     })
     this.pointStrings.forEach(({ p, s }) => {
-      s.addHardnessForce(10, 10)
-      s.addForce(0, 4)
+      s.addHardnessForce(4, 4)
+      s.addForce(0, 0.5)
       s.F[0].x += p.f.x
       s.F[0].y += p.f.y
       s.F[0].z += p.f.z
