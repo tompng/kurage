@@ -28,7 +28,7 @@ const jelly = new Jelly(32, {
   theta1: 0.2,
   theta2: 1.4
 }, {
-  radial: 10,
+  radial: 20,
   arc: 10
 })
 

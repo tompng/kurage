@@ -112,7 +112,7 @@ export class Jelly {
     for (let i = 0; i < numSegments; i++) {
       links.push(genLink(innerPoints[i], outerPoints[i], hardness.radial))
       links.push(genLink(innerPoints[i], innerPoints[(i + 1) % numSegments], hardness.arc))
-      links.push(genLink(outerPoints[i], outerPoints[(i + 1) % numSegments], hardness.arc))
+      links.push({ a: outerPoints[i], b: outerPoints[(i + 1) % numSegments], r: 0, k: hardness.arc })
     }
   }
   resetForce() {
@@ -124,11 +124,11 @@ export class Jelly {
       p.f.x -= friction * p.v.x
       p.f.y -= friction * p.v.y
       p.f.z -= friction * p.v.z
-      const { r, z } = toRZ(p.r, this.shape, shrink)
+      const { r, z } = toRZ(p.r, this.shape, shrink + (Math.sin(11 * p.th + 2) + Math.sin(7 * p.th)) / 20)
       const x = r * Math.cos(p.th)
       const y = r * Math.sin(p.th)
       const dst = this.transformLocalPoint({ x, y, z })
-      const f = vectorScale(vectorSub(dst, p.p), 100)
+      const f = vectorScale(vectorSub(dst, p.p), [0, 100, 10][p.r])
       p.f.x += f.x
       p.f.y += f.y
       p.f.z += f.z
@@ -140,7 +140,7 @@ export class Jelly {
       const dz = b.p.z - a.p.z
       const distance = Math.hypot(dx, dy, dz)
       const dotv = (dx * (b.v.x - a.v.x) + dy * (b.v.y - a.v.y) + dz * (b.v.z - a.v.z)) / distance
-      const scale = k * (distance - r) / r / distance + k * dotv / distance
+      const scale = k * (distance - r) / distance + k * dotv / distance
       a.f.x += scale * dx
       a.f.y += scale * dy
       a.f.z += scale * dz
