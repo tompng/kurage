@@ -1,13 +1,13 @@
-import vertexShader from './shaders/curve_star.vert'
+import vertexShader from './shaders/jelly.vert'
 import * as THREE from 'three'
 
 const fragmentShader = `
 precision mediump float;
 varying vec3 vposition;
 varying vec3 vnormal;
-varying vec3 vtexcoord;
+varying vec2 vtexcoord;
 void main() {
-  gl_FragColor = vec4((vnormal + 1) / 2.0, 0);
+  gl_FragColor = vec4(1,1,1,0.1);
 }
 `
 const coordIDs = ['000', '001', '010', '011', '100', '101', '110', '111'] as const
@@ -17,7 +17,7 @@ type AxisXUniformKey = `vx${CoordID}`
 type AxisYUniformKey = `vy${CoordID}`
 type AxisZUniformKey = `vz${CoordID}`
 
-type JellyUniforms = Record<PositionUniformKey | AxisXUniformKey | AxisYUniformKey | AxisZUniformKey, { value: THREE.Vector3 }>
+export type JellyUniforms = Record<PositionUniformKey | AxisXUniformKey | AxisYUniformKey | AxisZUniformKey, { value: THREE.Vector3 }>
 function jellyUniforms() {
   const data: Record<string, { value: THREE.Vector3 } | undefined> = {}
   for (const id of coordIDs) {
@@ -30,12 +30,14 @@ function jellyUniforms() {
 }
 
 export function createJellyShader() {
-  new THREE.ShaderMaterial({
+  return new THREE.ShaderMaterial({
     vertexShader,
     fragmentShader,
     uniforms: jellyUniforms(),
-    wireframe: true
-  })
+    wireframe: true,
+    side: THREE.DoubleSide,
+    transparent: true
+  }) as Omit<THREE.ShaderMaterial, 'uniforms'> & { uniforms: JellyUniforms }
 }
 
 export function createJellyGeomety(width: number, radialSegments: number, outlineSegments: number) {
@@ -50,11 +52,12 @@ export function createJellyGeomety(width: number, radialSegments: number, outlin
   const add = ([ax, ay]: XY, [bx, by]: XY, [cx, cy]: XY) => {
     tan1s.push(...tan1u, ...tan1u, ...tan1u)
     tan1s.push(...tan1d, ...tan1d, ...tan1d)
-    tan2s.push(...tan2, ...tan2, ...tan2, ...tan2, ...tan2, ...tan2)
+    tan2s.push(...tan2, ...tan2, ...tan2)
+    tan2s.push(...tan2, ...tan2, ...tan2)
     positions.push(ax, ay, 1, bx, by, 1, cx, cy, 1)
-    positions.push(ax, ay, 1 - width * (1 - ax))
-    positions.push(bx, by, 1 - width * (1 - bx))
-    positions.push(cx, cy, 1 - width * (1 - cx))
+    positions.push(ax, ay, 1 - width * (1 - ax ** 2))
+    positions.push(bx, by, 1 - width * (1 - bx ** 2))
+    positions.push(cx, cy, 1 - width * (1 - cx ** 2))
   }
   let prevSegments: XY[] = [[0, 0], [0, 1]]
   for (let i = 1; i <= radialSegments; i++) {
@@ -64,8 +67,8 @@ export function createJellyGeomety(width: number, radialSegments: number, outlin
     for (let j = 0; j <= n; j++) nextSegments.push([x, j / n])
     let pi = 0
     let ni = 0
-    while (ni <= n) {
-      if (pi / prevSegments.length < ni / n) {
+    while (pi + 1 < prevSegments.length || ni < n) {
+      if (pi / (prevSegments.length - 1) < ni / n) {
         add(prevSegments[pi], nextSegments[ni], prevSegments[++pi])
       } else {
         add(prevSegments[pi], nextSegments[ni], nextSegments[++ni])

@@ -42,7 +42,7 @@ function genLink(a: JellyPoint, b: JellyPoint, k: number): JellyLink {
 
 export class Jelly {
   size = 0.05
-  position: Point3D = { x: 0.5, y: 0, z: 0.5 }
+  position: Point3D = { x: 0, y: 0, z: 0 }
   rotation = new Matrix3()
   velocity: Point3D = { x: 0, y: 0, z: 0 }
   momentum: Point3D = { x: 0, y: 0, z: 0 }
@@ -214,9 +214,9 @@ export class Jelly {
     })
     this.resetForce()
   }
-  topPoint(r = 0, th = 0) {
+  topPoint(r = 0, th = 0, offset = 0) {
     const { z } = toRZ(0, this.shape, 0)
-    return this.transformLocalPoint({ x: r * Math.cos(th), y: r * Math.sin(th), z })
+    return this.transformLocalPoint({ x: r * Math.cos(th), y: r * Math.sin(th), z: z - offset })
   }
   renderToCanvas(ctx: CanvasRenderingContext2D) {
     this.coreStrings.forEach(({ s, r }) => {
@@ -264,11 +264,6 @@ export class Jelly {
   drawCurve(ctx: CanvasRenderingContext2D) {
     const top = this.topPoint()
     const { numSegments, innerPoints, outerPoints } = this
-    const mix = (a: number, b: number, t: number) => a * (1 - t) + t * b
-    const bez = (a: number, b: number, c: number, d: number, t: number ) => {
-      const m = mix(b, c, t)
-      return mix(mix(mix(a, b, t), m, t), mix(m, mix(c, d, t), t), t)
-    }
     for (let i = 0; i < numSegments; i++) {
       const th = 2 * Math.PI * i / numSegments
       const top2 = this.topPoint(this.shape.size, th)
@@ -294,10 +289,20 @@ export class Jelly {
       ctx.stroke()
     }
   }
-
-}
-
-type Segment = {
-  theta: number
-  i: number
+  segmentData() {
+    const top = this.topPoint()
+    const offset = this.shape.size
+    const bottom = this.topPoint(0, 0, offset)
+    const { numSegments, innerPoints, outerPoints } = this
+    const up = vectorSub(top, bottom)
+    return [...new Array(numSegments)].map((_, i) => {
+      const th = 2 * Math.PI * i / numSegments
+      const inner = innerPoints[i].p
+      const outer = outerPoints[i].p
+      const radial = vectorScale(vectorSub(this.topPoint(this.shape.size, th), top), 3)
+      const oradial = vectorScale(vectorSub(outer, inner), 3)
+      const arc = vectorScale(vectorSub(outerPoints[(i + 1) % numSegments].p, outerPoints[(i - 1 + numSegments) % numSegments].p), 0.5)
+      return { top, up, bottom, outer, radial, oradial, arc }
+    })
+  }
 }
