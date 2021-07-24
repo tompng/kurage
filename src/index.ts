@@ -2,13 +2,16 @@ import { Ribbon, String3D } from './string'
 import { Jelly } from './jelly'
 import * as THREE from 'three'
 import { createJellyGeomety, createJellyShader, JellyUniforms } from './jelly_mesh'
-import { Point3D, normalize, cross, scale as vectorScale } from './math'
+import { Point3D, normalize, cross, scale as vectorScale, add as vectorAdd, sub as vectorSub } from './math'
+import { BezierSegment, BezierStringRenderer } from './string_mesh'
+
 function assignGlobal(data: Record<string, any>) {
   for (const i in data) (window as any)[i] = data[i]
 }
+const size = 800
 const canvas = document.createElement('canvas')
-canvas.width = 1024
-canvas.height = 1024
+canvas.width = size
+canvas.height = size
 document.body.appendChild(canvas)
 const mouse = { x: 0.5, y: 0.5 }
 document.body.onpointerdown = document.body.onpointermove = e => {
@@ -42,7 +45,7 @@ function update(){
   jelly.update(dt, (1 - Math.cos(performance.now() / 1000)) / 4)
 }
 
-function render() {
+function render2d() {
   const ctx = canvas.getContext('2d')!
   ctx.save()
   ctx.clearRect(0, 0, canvas.width, canvas.height)
@@ -52,11 +55,11 @@ function render() {
   ctx.lineWidth = 0.002
   jelly.renderToCanvas(ctx)
   ctx.restore()
-  render3()
 }
 function frame() {
   update()
   render()
+  render2d()
   requestAnimationFrame(frame)
 }
 requestAnimationFrame(frame)
@@ -64,10 +67,23 @@ requestAnimationFrame(frame)
 assignGlobal({ strings, jelly })
 
 
-const renderer = new THREE.WebGLRenderer({ antialias: true })
+const renderer = new THREE.WebGLRenderer()
 document.body.appendChild(renderer.domElement)
 renderer.domElement.style.cssText = 'position: fixed; opacity: 0.8;left:0;top:0'
-renderer.setSize(800, 800)
+renderer.setSize(size, size)
+const target = new THREE.WebGLRenderTarget(size, size, {
+  minFilter: THREE.NearestFilter,
+  magFilter: THREE.NearestFilter,
+  type: THREE.HalfFloatType
+})
+const targetRenderMesh = new THREE.Mesh(new THREE.PlaneBufferGeometry(), new THREE.MeshBasicMaterial({ map: target.texture }))
+const targetRenderScene = new THREE.Scene()
+const targetRenderCamera = new THREE.Camera()
+targetRenderMesh.scale.x = targetRenderMesh.scale.y = 2
+targetRenderScene.add(targetRenderMesh)
+
+
+
 const scene = new THREE.Scene()
 const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 100)
 camera.position.set(0, -0.2, 0)
@@ -84,8 +100,9 @@ for (let i = 0; i < jelly.numSegments; i++) {
   uniforms.push(material.uniforms)
 }
 
+const stringRenderer = new BezierStringRenderer(8, 5)
 
-function render3() {
+function render() {
   const segments = jelly.segmentData()
   const set = (v: { value: THREE.Vector3 }, p: Point3D) => v.value.set(p.x, p.y, p.z)
   const zero = (v: { value: THREE.Vector3 }) => v.value.set(0, 0, 0)
@@ -102,5 +119,34 @@ function render3() {
     set(u.v111, seg1.outer); set(u.vx111, seg1.oradial); set(u.vy111, seg1.arc); set(u.vz111, seg1.radial)
   })
   meshes.forEach(m => { (m.material as any).needsUpdate = true })
+  renderer.setRenderTarget(target)
+  renderer.autoClear = false
+  renderer.clearColor()
+  renderer.clearDepth()
+
+  ;[jelly.coreStrings, jelly.pointStrings].forEach(list => {
+    list.forEach(({ s }) => {
+      stringRenderer.render(renderer, camera,
+        [...new Array(s.numSegments)].map((_, i) => {
+          const ai = Math.max(i - 1, 0)
+          const di = Math.min(i + 2, s.numSegments)
+          const a = s.points[ai]
+          const b = s.points[i]
+          const c = s.points[i + 1]
+          const d = s.points[di]
+          return [
+            b,
+            vectorAdd(b, vectorScale(vectorSub(c, a), 0.5 / 3)),
+            vectorAdd(c, vectorScale(vectorSub(d, b), -0.5 / 3)),
+            c
+          ]
+        }),
+        0.0002,
+        new THREE.Color(0x111122)
+      )
+    })
+  })
   renderer.render(scene, camera)
+  renderer.setRenderTarget(null)
+  renderer.render(targetRenderScene, targetRenderCamera)
 }
