@@ -4,6 +4,7 @@ import * as THREE from 'three'
 import { createJellyGeomety, createJellyShader, JellyUniforms } from './jelly_mesh'
 import { Point3D, normalize, cross, scale as vectorScale, add as vectorAdd, sub as vectorSub } from './math'
 import { BezierSegment, BezierStringRenderer } from './string_mesh'
+import { BezierSurfaceRenderer } from './surface_renderer'
 
 function assignGlobal(data: Record<string, any>) {
   for (const i in data) (window as any)[i] = data[i]
@@ -26,7 +27,7 @@ const shortStrings = [...new Array(4)].map(() => new String3D(20, 0.1 + 0.01 * M
 const ribbons = strings.map(s => new Ribbon(s.numSegments))
 
 
-const jelly = new Jelly(32, {
+const jelly = new Jelly(16, {
   size: 1,
   theta1: 0.2,
   theta2: 1.4
@@ -101,6 +102,7 @@ for (let i = 0; i < jelly.numSegments; i++) {
 }
 
 const stringRenderer = new BezierStringRenderer(8, 5)
+const surfaceRenderer = new BezierSurfaceRenderer(32)
 
 function render() {
   const segments = jelly.segmentData()
@@ -123,6 +125,28 @@ function render() {
   renderer.autoClear = false
   renderer.clearColor()
   renderer.clearDepth()
+  for (let i = 0; i < segments.length; i++) {
+    const seg0 = segments[i]
+    const seg1 = segments[(i + 1) % segments.length]
+    surfaceRenderer.render(renderer, camera,
+      seg0.top,
+      seg0.outer,
+      seg1.outer,
+      seg0.up,
+      seg0.radial,
+      seg1.radial
+    )
+    surfaceRenderer.render(renderer, camera,
+      vectorAdd(vectorScale(seg0.top, 0.8), vectorScale(seg0.bottom, 0.2)),
+      seg0.outer,
+      seg1.outer,
+      seg0.up,
+      seg0.radial,
+      seg1.radial
+    )
+
+
+  }
 
   ;[jelly.coreStrings, jelly.pointStrings].forEach(list => {
     list.forEach(({ s }) => {
@@ -146,7 +170,7 @@ function render() {
       )
     })
   })
-  renderer.render(scene, camera)
+  // renderer.render(scene, camera)
   renderer.setRenderTarget(null)
   renderer.render(targetRenderScene, targetRenderCamera)
 }
