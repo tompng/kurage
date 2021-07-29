@@ -175,7 +175,7 @@ export class Jelly {
       for (let i = 0; i < n; i++) {
         const gp = this.transformLocalPoint(vectorAdd(p, { x: 0, y: 0, z: -i * s.segmentLength / this.size }))
         const fv = vectorSub(vectorSub(gp, s.points[i]), vectorScale(s.velocities[i], 4 * dt))
-        const f = 400 * (n - i) / n / n
+        const f = 40 * (n - i) / n / n
         s.F[i].x += f * fv.x
         s.F[i].y += f * fv.y
         s.F[i].z += f * fv.z

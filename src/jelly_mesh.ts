@@ -82,3 +82,32 @@ export function createJellyGeomety(width: number, radialSegments: number, outlin
   geometry.setAttribute('tan2', new THREE.BufferAttribute(new Float32Array(tan2s), 3))
   return geometry
 }
+
+export function createPlaneJellyGeomety(segments: number) {
+  const positions: number[] = []
+  const tan1s: number[] = []
+  const tan2s: number[] = []
+  type XY = [number, number]
+  const tan1 = [1, 0, 0]
+  const tan2 = [0, 1, 0]
+  const add = ([ax, ay]: XY, [bx, by]: XY, [cx, cy]: XY) => {
+    tan1s.push(...tan1, ...tan1, ...tan1)
+    tan2s.push(...tan2, ...tan2, ...tan2)
+    positions.push(ax, ay, 1, bx, by, 1, cx, cy, 1)
+  }
+  for (let i = 0; i < segments; i++) {
+    for (let j = 0; j < segments; j++) {
+      const x0 = i / segments
+      const y0 = j / segments
+      const x1 = (i + 1) / segments
+      const y1 = (j + 1) / segments
+      add([x0, y0], [x1, y0], [x0, y1])
+      add([x1, y0], [x1, y1], [x0, y1])
+    }
+  }
+  const geometry = new THREE.BufferGeometry()
+  geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(positions), 3))
+  geometry.setAttribute('tan1', new THREE.BufferAttribute(new Float32Array(tan1s), 3))
+  geometry.setAttribute('tan2', new THREE.BufferAttribute(new Float32Array(tan2s), 3))
+  return geometry
+}

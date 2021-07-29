@@ -1,5 +1,6 @@
 import { Ribbon, String3D } from './string'
 import { Jelly } from './jelly'
+import { JellyGrid } from './grid_jelly'
 import * as THREE from 'three'
 import { createJellyGeomety, createJellyShader, JellyUniforms } from './jelly_mesh'
 import { Point3D, normalize, cross, scale as vectorScale, add as vectorAdd, sub as vectorSub } from './math'
@@ -26,7 +27,7 @@ const shortStrings = [...new Array(4)].map(() => new String3D(20, 0.1 + 0.01 * M
 
 const ribbons = strings.map(s => new Ribbon(s.numSegments))
 
-
+const jelly2 = new JellyGrid(6)
 const jelly = new Jelly(16, {
   size: 1,
   theta1: 0.2,
@@ -55,6 +56,10 @@ function render2d() {
   ctx.scale(1, -1)
   ctx.lineWidth = 0.002
   jelly.renderToCanvas(ctx)
+
+  jelly2.update(performance.now() / 1000)
+  jelly2.renderToCanvas(ctx)
+
   ctx.restore()
 }
 function frame() {
