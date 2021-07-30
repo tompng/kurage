@@ -55,7 +55,7 @@ function render2d() {
   ctx.translate(0.5, 0.5)
   ctx.scale(1, -1)
   ctx.lineWidth = 0.002
-  jelly.renderToCanvas(ctx)
+  // jelly.renderToCanvas(ctx)
 
   jelly2.update(performance.now() / 1000)
   jelly2.renderToCanvas(ctx)
@@ -110,6 +110,7 @@ const stringRenderer = new BezierStringRenderer(8, 5)
 const surfaceRenderer = new BezierSurfaceRenderer(32)
 
 function render() {
+  return
   const segments = jelly.segmentData()
   const set = (v: { value: THREE.Vector3 }, p: Point3D) => v.value.set(p.x, p.y, p.z)
   const zero = (v: { value: THREE.Vector3 }) => v.value.set(0, 0, 0)

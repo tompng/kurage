@@ -82,6 +82,77 @@ export class JellyGrid {
   transformLocalPoint(p: Point3D) {
     return vectorAdd(this.position, this.rotation.transform(p))
   }
+  transformGridPoint({ x, y, z }: Point3D) {
+    const { coords, segments } = this
+    x = (x + 1) * this.segments / 2
+    y = (y + 1) * this.segments / 2
+    const ix = Math.max(0, Math.min(Math.floor(x), segments - 1))
+    const iy = Math.max(0, Math.min(Math.floor(y), segments - 1))
+    x -= ix
+    y -= iy
+    const a1x = x * x * (3 - 2 * x)
+    const a1y = y * y * (3 - 2 * y)
+    const a1z = z * z * (3 - 2 * z)
+    const a0x = 1 - a1x
+    const a0y = 1 - a1y
+    const a0z = 1 - a1z
+    const b0x = x * (1 - x) * (1 - x)
+    const b0y = y * (1 - y) * (1 - y)
+    const b0z = z * (1 - z) * (1 - z)
+    const b1x = x * x * (x - 1)
+    const b1y = y * y * (y - 1)
+    const b1z = z * z * (z - 1)
+    x = y = z = 0
+    for (let ijk = 0; ijk < 8; ijk++) {
+      const i = ijk & 1
+      const j = (ijk >> 1) & 1
+      const k = (ijk >> 2) & 1
+      const x0 = ix + i
+      const y0 = iy + j
+      const xa = x0 === 0 ? 0 : x0 === segments ? segments - 2 : x0 - 1
+      const xb = xa + 1
+      const xc = xa + 2
+      const ya = y0 === 0 ? 0 : y0 === segments ? segments - 2 : y0 - 1
+      const yb = ya + 1
+      const yc = ya + 2
+      const p = coords[k][x0][y0].p
+      const pza = coords[0][x0][y0].p
+      const pzc = coords[1][x0][y0].p
+      const pxa = coords[k][xa][y0].p
+      const pxb = coords[k][xb][y0].p
+      const pxc = coords[k][xc][y0].p
+      const pya = coords[k][x0][ya].p
+      const pyb = coords[k][x0][yb].p
+      const pyc = coords[k][x0][yc].p
+      const a = i === 0 ? a0x : a1x
+      const b = j === 0 ? a0y : a1y
+      const c = k === 0 ? a0z : a1z
+      const na = i === 0 ? b0x : b1x
+      const nb = j === 0 ? b0y : b1y
+      const nc = k === 0 ? b0z : b1z
+      const [ax, bx, cx] = x0 === 0 ? [-1.5, 2, -0.5] : x0 === segments ? [0.5, -2, 1.5] : [-0.5, 0, 0.5]
+      const [ay, by, cy] = y0 === 0 ? [-1.5, 2, -0.5] : y0 === segments ? [0.5, -2, 1.5] : [-0.5, 0, 0.5]
+      x += (
+        p.x * a * b * c
+        + (ax * pxa.x + bx * pxb.x + cx * pxc.x) * na * b * c
+        + (ay * pya.x + by * pyb.x + cy * pyc.x) * a * nb * c
+        + (pzc.x - pza.x) * a * b * nc
+      )
+      y += (
+        p.y * a * b * c
+        + (ax * pxa.y + bx * pxb.y + cx * pxc.y) * na * b * c
+        + (ay * pya.y + by * pyb.y + cy * pyc.y) * a * nb * c
+        + (pzc.y - pza.y) * a * b * nc
+      )
+      z += (
+        p.z * a * b * c
+        + (ax * pxa.z + bx * pxb.z + cx * pxc.z) * na * b * c
+        + (ay * pya.z + by * pyb.z + cy * pyc.z) * a * nb * c
+        + (pzc.z - pza.z) * a * b * nc
+      )
+    }
+    return { x, y, z }
+  }
   addInnerForce() {
     const { segments, coords } = this
     function add(a: JellyCoord, b: JellyCoord) {
@@ -90,7 +161,7 @@ export class JellyGrid {
       const dy = b.p.y - a.p.y
       const dz = b.p.z - a.p.z
       const r = Math.hypot(dx, dy, dz)
-      const f = (1 - dist / r) / 4
+      const f = (1 - dist / r) * 4
       a.f.x += f * dx
       a.f.y += f * dy
       a.f.z += f * dz
@@ -142,6 +213,7 @@ export class JellyGrid {
     this.velocity = vectorAdd(this.velocity, vectorScale(f, dt))
     this.momentum = vectorAdd(this.momentum, vectorScale(cross(vectorSub(p, this.position), f), dt))
   }
+
   renderToCanvas(ctx: CanvasRenderingContext2D) {
     ctx.save()
     ctx.scale(0.2, 0.2)
@@ -161,6 +233,20 @@ export class JellyGrid {
         }
       }
     }
+    ctx.stroke()
+    ctx.beginPath()
+    ctx.lineWidth *= 4
+    for (let r = 1; r > 0.05; r-=0.1) {
+      const n = Math.round(r * 64)
+      const p = this.transformGridPoint({ x: r, y: 0, z: 0 })
+      ctx.moveTo(p.x, p.z)
+      for (let i = 0; i <= n; i++) {
+        const th = 2 * Math.PI * i / n
+        const p = this.transformGridPoint({ x: r * Math.cos(th), y: r * Math.sin(th), z: (1 - (1 - r*r) ** 0.5) / 2 })
+        i === 0 ? ctx.moveTo(p.x, p.z) : ctx.lineTo(p.x, p.z)
+      }
+    }
+    ctx.strokeStyle = 'blue'
     ctx.stroke()
     ctx.restore()
   }
