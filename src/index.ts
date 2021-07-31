@@ -28,6 +28,16 @@ const shortStrings = [...new Array(4)].map(() => new String3D(20, 0.1 + 0.01 * M
 const ribbons = strings.map(s => new Ribbon(s.numSegments))
 
 const jelly2 = new JellyGrid(6)
+for (let i = 0; i < 4; i++) {
+  const th = 2 * Math.PI * i / 4
+  const cos = Math.cos(th)
+  const sin = Math.sin(th)
+  jelly2.addString(
+    { x: cos, y: sin, z: 0.5 },
+    { x: cos, y: sin, z: 4 },
+    new String3D(100, 2 + 0.5 * Math.random(), 1, 1)
+  )
+}
 const jelly = new Jelly(16, {
   size: 1,
   theta1: 0.2,

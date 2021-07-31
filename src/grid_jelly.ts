@@ -7,6 +7,7 @@ import {
   add as vectorAdd,
   sub as vectorSub
 } from './math'
+import type { String3D } from './string'
 
 type JellyCoord = {
   r: number
@@ -24,6 +25,8 @@ export class JellyGrid {
   velocity: Point3D = { x: 0, y: 0, z: 0 }
   momentum: Point3D = { x: 0, y: 0, z: 0 }
   coords: [JellyCoord[][],JellyCoord[][]] = [[], []]
+  strings: { pos: Point3D, dir: Point3D, string: String3D }[] = []
+
   constructor(public segments: number) {
     for (let iz = 0; iz < 2; iz++) {
       for (let ix = 0; ix <= segments; ix++) {
@@ -55,6 +58,22 @@ export class JellyGrid {
         }
       }
     }
+  }
+  addString(pos: Point3D, dir: Point3D, string: String3D) {
+    this.strings.push({ pos, dir, string })
+    string.directions
+    const gpos = this.transformGridPoint(pos)
+    string.points[0].x = gpos.x
+    string.points[0].y = gpos.y
+    string.points[0].z = gpos.z
+    const gpos2 = this.transformGridPoint(vectorAdd(pos, vectorScale(dir, 0.01)))
+    const d = vectorNormalize(vectorSub(gpos2, gpos))
+    string.directions.forEach(dir => {
+      dir.x = d.x
+      dir.y = d.y
+      dir.z = d.z
+    })
+    string.calcPoints()
   }
   jellyDestination(l: number, th: number, time: number, z: number) {
     const f = ((1 + Math.sin(time - l + Math.sin(th) * 0.5)) / 2) ** 2
@@ -214,6 +233,34 @@ export class JellyGrid {
         }
       }
     }
+    this.strings.forEach(({ pos, string }) => {
+      string.addHardnessForce(4, 4)
+      string.addForce(0, 0.5)
+      string.F.forEach(f => {
+        f.z += 0.0002
+      })
+      const f = string.update(dt, { first: this.transformGridPoint(pos) })
+      this.addGridForce(pos, f.first, -dt)
+    })
+  }
+  addGridForce({ x, y, z }: Point3D, f: Point3D, dt: number) {
+    const { coords, segments } = this
+    x = (x + 1) * this.segments / 2
+    y = (y + 1) * this.segments / 2
+    const ix = Math.max(0, Math.min(Math.floor(x), segments - 1))
+    const iy = Math.max(0, Math.min(Math.floor(y), segments - 1))
+    x -= ix
+    y -= iy
+    for (let ijk = 0; ijk < 8; ijk++) {
+      const i = ijk & 1
+      const j = (ijk >> 1) & 1
+      const k = (ijk >> 2) & 1
+      const v = coords[k][ix + i][iy + j].v
+      const scale = (i ? x : 1 - x) * (j ? y : 1 - y) * (k ? z : 1 - z) * dt
+      v.x += scale * f.x
+      v.y += scale * f.y
+      v.z += scale * f.z
+    }
   }
   pull(p: Point3D, f: Point3D, dt: number) {
     this.velocity = vectorAdd(this.velocity, vectorScale(f, dt))
@@ -258,9 +305,10 @@ export class JellyGrid {
   renderToCanvas(ctx: CanvasRenderingContext2D) {
     ctx.save()
     ctx.scale(0.2, 0.2)
+    ctx.lineCap = ctx.lineJoin = 'round'
     this.renderDebug(ctx)
     ctx.beginPath()
-    ctx.lineWidth *= 4
+    ctx.lineWidth *= 8
     for (let r = 1; r > 0.05; r-=0.1) {
       const n = Math.round(r * 64)
       const p = this.transformGridPoint({ x: r, y: 0, z: 0 })
@@ -273,6 +321,8 @@ export class JellyGrid {
     }
     ctx.strokeStyle = 'blue'
     ctx.stroke()
+    ctx.strokeStyle = 'red'
+    this.strings.forEach(({ string }) => string.renderToCanvas(ctx))
     ctx.restore()
   }
 }
