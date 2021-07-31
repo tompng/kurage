@@ -20,7 +20,7 @@ type JellyCoord = {
 const geometry = createPlaneJellyGeomety(10)
 export class JellyGrid {
   position: Point3D = { x: 0, y: 0, z: 0 }
-  rotation = new Matrix3()
+  rotation = Matrix3.fromRotation({ x: 1, y: 2, z: 3 }, 0.4)
   velocity: Point3D = { x: 0, y: 0, z: 0 }
   momentum: Point3D = { x: 0, y: 0, z: 0 }
   coords: [JellyCoord[][],JellyCoord[][]] = [[], []]
@@ -65,7 +65,7 @@ export class JellyGrid {
     return {
       x: r * Math.cos(th),
       y: r * Math.sin(th),
-      z: rlen - (rlen + z) * Math.cos(l / rlen)
+      z: rlen - (rlen + z) * Math.cos(l / rlen) - 0.25
     }
   }
   updateDestination(time: number) {
@@ -161,7 +161,7 @@ export class JellyGrid {
       const dy = b.p.y - a.p.y
       const dz = b.p.z - a.p.z
       const r = Math.hypot(dx, dy, dz)
-      const f = (1 - dist / r) * 4
+      const f = (1 - dist / r) * 16
       a.f.x += f * dx
       a.f.y += f * dy
       a.f.z += f * dz
@@ -188,6 +188,9 @@ export class JellyGrid {
   }
   update(time: number) {
     const dt = 0.01
+    this.position =vectorAdd(this.position, vectorScale(this.velocity, dt))
+    const w = Matrix3.fromRotation(this.momentum, vectorLength(this.momentum) * dt)
+    this.rotation = w.mult(this.rotation)
     this.updateDestination(time)
     this.addInnerForce()
     const { coords, segments} = this
@@ -195,12 +198,15 @@ export class JellyGrid {
       for (let ix = 0; ix <= segments; ix++) {
         for (let iy = 0; iy <= segments; iy++) {
           const { p, v, f, dst } = coords[iz][ix][iy]
-          f.x += 8 * (dst.x - p.x) - 2 * v.x
-          f.y += 8 * (dst.y - p.y) - 2 * v.y
-          f.z += 8 * (dst.z - p.z) - 2 * v.z
-          v.x += f.x * dt
-          v.y += f.y * dt
-          v.z += f.z * dt
+          const f2 = {
+            x: 8 * (dst.x - p.x) - 2 * v.x,
+            y: 8 * (dst.y - p.y) - 2 * v.y,
+            z: 8 * (dst.z - p.z) - 2 * v.z
+          }
+          v.x += (f.x + f2.x) * dt
+          v.y += (f.y + f2.y) * dt
+          v.z += (f.z + f2.z) * dt
+          this.pull(p, f2, -dt)
           p.x += v.x * dt
           p.y += v.y * dt
           p.z += v.z * dt
@@ -213,10 +219,22 @@ export class JellyGrid {
     this.velocity = vectorAdd(this.velocity, vectorScale(f, dt))
     this.momentum = vectorAdd(this.momentum, vectorScale(cross(vectorSub(p, this.position), f), dt))
   }
-
-  renderToCanvas(ctx: CanvasRenderingContext2D) {
+  renderDebug(ctx: CanvasRenderingContext2D) {
     ctx.save()
-    ctx.scale(0.2, 0.2)
+    const bodyCoords: Point3D[] = []
+    for (let i = 0; i < 8; i++) bodyCoords.push({ x: (i & 1) * 2 - 1, y: ((i >> 1) & 1) * 2 - 1, z: ((i >> 2) & 1) * 2 - 1 })
+    ctx.beginPath()
+    bodyCoords.forEach(p => {
+      bodyCoords.forEach(q => {
+        if (distance(p, q) !== 2) return
+        const tp = this.transformLocalPoint(vectorScale(p, 0.5))
+        const tq = this.transformLocalPoint(vectorScale(q, 0.5))
+        ctx.moveTo(tp.x, tp.z)
+        ctx.lineTo(tq.x, tq.z)
+      })
+    })
+    ctx.strokeStyle = 'gray'
+    ctx.stroke()
     ctx.beginPath()
     const { segments, coords } = this
     function draw(a: JellyCoord, b: JellyCoord) {
@@ -226,14 +244,21 @@ export class JellyGrid {
     for (let iz = 0; iz < 2; iz++) {
       for (let ix = 0; ix <= segments; ix++) {
         for (let iy = 0; iy <= segments; iy++) {
-          const c = this.coords[iz][ix][iy]
-          if (iz == 0) draw(c, this.coords[iz + 1][ix][iy])
-          if (ix != 0) draw(c, this.coords[iz][ix - 1][iy])
-          if (iy != 0) draw(c, this.coords[iz][ix][iy - 1])
+          const c = coords[iz][ix][iy]
+          if (iz == 0) draw(c, coords[iz + 1][ix][iy])
+          if (ix != 0) draw(c, coords[iz][ix - 1][iy])
+          if (iy != 0) draw(c, coords[iz][ix][iy - 1])
         }
       }
     }
+    ctx.strokeStyle = 'black'
     ctx.stroke()
+    ctx.restore()
+  }
+  renderToCanvas(ctx: CanvasRenderingContext2D) {
+    ctx.save()
+    ctx.scale(0.2, 0.2)
+    this.renderDebug(ctx)
     ctx.beginPath()
     ctx.lineWidth *= 4
     for (let r = 1; r > 0.05; r-=0.1) {
