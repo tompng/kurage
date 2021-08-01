@@ -24,7 +24,7 @@ for (let i = 0; i < 4; i++) {
   const cos = Math.cos(th)
   const sin = Math.sin(th)
   jelly.addString(
-    { x: cos, y: sin, z: 1 },
+    { x: 0.98 * cos, y: 0.98 * sin, z: 0.9 },
     { x: cos, y: sin, z: 4 },
     new String3D(100, 2 + 0.5 * Math.random(), 1, 1)
   )
@@ -70,11 +70,51 @@ camera.lookAt(0, 0, 0)
 
 const stringRenderer = new BezierStringRenderer(8, 5)
 
+const clovers = [0, 1, 2, 3].map(i => {
+  const th = Math.PI * i / 2
+  const cos = Math.cos(th)
+  const sin = Math.sin(th)
+  const rand = (a: number) => a * (2 * Math.random() - 1)
+  const line: Point3D[] = []
+  for (let i = 0; i <= 10; i++) {
+    const t = (2 * i / 10 - 1) * 3
+    const x = 0.2 + 0.12 * Math.cos(t) + rand(0.01)
+    const y = 0.12 * Math.sin(t) + rand(0.01)
+    const z = 0.8+ rand(0.015)
+    line.push({
+      x: x * cos - y * sin,
+      y: x * sin + y * cos,
+      z
+    })
+  }
+  return line
+})
+
 function render() {
   renderer.setRenderTarget(target)
   renderer.autoClear = false
   renderer.clearColor()
   renderer.clearDepth()
+
+  clovers.forEach(line => {
+    const gline = line.map(p => jelly.transformGridPoint(p))
+    stringRenderer.render(renderer, camera,
+      [...new Array(gline.length - 3)].map((_, i) => {
+        const a = gline[i]
+        const b = gline[i + 1]
+        const c = gline[i + 2]
+        const d = gline[i + 3]
+        return [
+          b,
+          vectorAdd(b, vectorScale(vectorSub(c, a), 1 / 6)),
+          vectorAdd(c, vectorScale(vectorSub(d, b), -1 / 6)),
+          c
+        ]
+      }),
+      0.1,
+      new THREE.Color(0x444444)
+    )
+  })
 
   jelly.strings.forEach(({ string }) => {
     stringRenderer.render(renderer, camera,
@@ -87,8 +127,8 @@ function render() {
         const d = string.points[di]
         return [
           b,
-          vectorAdd(b, vectorScale(vectorSub(c, a), 0.5 / 3)),
-          vectorAdd(c, vectorScale(vectorSub(d, b), -0.5 / 3)),
+          vectorAdd(b, vectorScale(vectorSub(c, a), 1 / 6)),
+          vectorAdd(c, vectorScale(vectorSub(d, b), -1 / 6)),
           c
         ]
       }),
