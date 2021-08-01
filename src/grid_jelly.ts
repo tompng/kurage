@@ -30,7 +30,7 @@ type Cell = {
 }
 export class JellyGrid {
   position: Point3D = { x: 0, y: 0, z: 0 }
-  rotation = Matrix3.fromRotation({ x: 1, y: 0, z: 0 }, 0)
+  rotation = Matrix3.fromRotation({ x: 3, y: 2, z: 1 }, 1)
   velocity: Point3D = { x: 0, y: 0, z: 0 }
   momentum: Point3D = { x: 0, y: 0, z: 0 }
   coords: [JellyCoord[][],JellyCoord[][]] = [[], []]
@@ -344,13 +344,27 @@ export class JellyGrid {
         }
       }
     }
-    this.strings.forEach(({ pos, string }) => {
+    this.strings.forEach(({ pos, dir, string }) => {
       string.addHardnessForce(4, 4)
       string.addForce(0, 0.5)
-      string.F.forEach(f => {
-        f.z += 0.0002
-      })
-      const f = string.update(dt, { first: this.transformGridPoint(pos) })
+      string.F.forEach(f => { f.z += 0.0002 })
+      const n = Math.min(Math.ceil(0.1 / string.segmentLength), string.numSegments)
+      const firstPos = this.transformGridPoint(pos)
+      const gdir = vectorNormalize(vectorSub(this.transformGridPoint(vectorAdd(pos, vectorScale(dir, 0.01))), firstPos))
+      for (let i = 0; i < n; i++) {
+        const p = string.points[i]
+        const t = i / n * 10
+        const f = {
+          x: t * (firstPos.x + i * string.segmentLength * gdir.x - p.x),
+          y: t * (firstPos.y + i * string.segmentLength * gdir.y - p.y),
+          z: t * (firstPos.z + i * string.segmentLength * gdir.z - p.z)
+        }
+        string.F[i].x += f.x
+        string.F[i].y += f.y
+        string.F[i].z += f.z
+        this.pull(p, f, -dt)
+      }
+      const f = string.update(dt, { first: firstPos })
       this.addGridForce(pos, f.first, -dt)
     })
     this.updateMesh()

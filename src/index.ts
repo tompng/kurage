@@ -30,6 +30,18 @@ for (let i = 0; i < 4; i++) {
   )
 }
 
+for (let i = 0; i < 64; i++) {
+  const th = 2 * Math.PI * i / 64
+  const cos = Math.cos(th)
+  const sin = Math.sin(th)
+  jelly.addString(
+    { x: cos, y: sin, z: 1 },
+    { x: cos, y: sin, z: 4 },
+    new String3D(10, 0.2 + 0.1 * Math.random(), 1, 0.1)
+  )
+}
+
+
 function render2d() {
   const ctx = canvas.getContext('2d')!
   ctx.save()
@@ -39,7 +51,7 @@ function render2d() {
   ctx.scale(1, -1)
   ctx.lineWidth = 0.002
   jelly.update(performance.now() / 1000)
-  jelly.renderToCanvas(ctx)
+  // jelly.renderToCanvas(ctx)
 
   ctx.restore()
 }
@@ -71,7 +83,7 @@ targetRenderScene.add(targetRenderMesh)
 const scene = new THREE.Scene()
 jelly.addToScene(scene)
 const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 100)
-camera.position.set(0, -2, 0)
+camera.position.set(0, -4, 0)
 camera.lookAt(0, 0, 0)
 
 const stringRenderer = new BezierStringRenderer(8, 5)
@@ -98,7 +110,7 @@ function render() {
           c
         ]
       }),
-      0.02,
+      0.04,
       new THREE.Color(0x444488)
     )
   })
