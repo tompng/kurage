@@ -111,7 +111,7 @@ function render() {
           c
         ]
       }),
-      0.1,
+      0.03,
       new THREE.Color(0x444444)
     )
   })
@@ -132,7 +132,7 @@ function render() {
           c
         ]
       }),
-      0.04,
+      0.01,
       new THREE.Color(0xBFBFFF)
     )
   })
