@@ -1,4 +1,5 @@
-import { createPlaneJellyGeomety, createJellyShader, JellyUniforms } from './jelly_mesh'
+import * as THREE from 'three'
+import { createPlaneJellyGeomety, createJellyShader, JellyUniforms, createJellyGeometryGrids } from './jelly_mesh'
 import {
   Point3D, Matrix3, distance, cross,
   normalize as vectorNormalize,
@@ -18,14 +19,23 @@ type JellyCoord = {
   v: Point3D
   f: Point3D
 }
-const geometry = createPlaneJellyGeomety(10)
+
+type Cell = {
+  i: number
+  j: number
+  uniforms: JellyUniforms
+  material: THREE.ShaderMaterial
+  mesh: THREE.Mesh
+  geometry: THREE.BufferGeometry
+}
 export class JellyGrid {
   position: Point3D = { x: 0, y: 0, z: 0 }
-  rotation = Matrix3.fromRotation({ x: 1, y: 2, z: 3 }, 0.4)
+  rotation = Matrix3.fromRotation({ x: 1, y: 0, z: 0 }, 0)
   velocity: Point3D = { x: 0, y: 0, z: 0 }
   momentum: Point3D = { x: 0, y: 0, z: 0 }
   coords: [JellyCoord[][],JellyCoord[][]] = [[], []]
   strings: { pos: Point3D, dir: Point3D, string: String3D }[] = []
+  cells: Cell[] = []
 
   constructor(public segments: number) {
     for (let iz = 0; iz < 2; iz++) {
@@ -58,6 +68,107 @@ export class JellyGrid {
         }
       }
     }
+    const gridGeometries = createJellyGeometryGrids(segments)
+    gridGeometries.forEach((geometries, i) => {
+      return geometries.forEach((geometry, j) => {
+        if (!geometry) return
+        const material = createJellyShader()
+        this.cells.push({
+          i,
+          j,
+          geometry,
+          material,
+          uniforms: material.uniforms,
+          mesh: new THREE.Mesh(geometry, material)
+        })
+      })
+    })
+  }
+  addToScene(scene: THREE.Scene) {
+    this.cells.forEach(cell => scene.add(cell.mesh))
+  }
+  removeFromScene(scene: THREE.Scene) {
+    this.cells.forEach(cell => scene.remove(cell.mesh))
+  }
+  updateMesh() {
+    const { coords, segments } = this
+    function set(v: { value: THREE.Vector3 }, p: Point3D) {
+      v.value.set(p.x, p.y, p.z)
+    }
+    function mixset(v: { value: THREE.Vector3 }, a: Point3D, b: Point3D, c: Point3D, w: readonly [number, number, number]) {
+      const [wa, wb, wc] = w
+      v.value.set(
+        a.x * wa + b.x * wb + c.x * wc,
+        a.y * wa + b.y * wb + c.y * wc,
+        a.z * wa + b.z * wb + c.z * wc,
+      )
+    }
+    const wc = [-0.5, 0, 0.5] as const
+    const wl = [-1.5, 2, -0.5] as const
+    const wr = [0.5, -2, 1.5] as const
+    this.cells.forEach(({ i, j, uniforms, material }) => {
+      set(uniforms.v000, coords[0][i][j].p)
+      set(uniforms.v100, coords[0][i + 1][j].p)
+      set(uniforms.v010, coords[0][i][j + 1].p)
+      set(uniforms.v110, coords[0][i + 1][j + 1].p)
+      set(uniforms.v001, coords[1][i][j].p)
+      set(uniforms.v101, coords[1][i + 1][j].p)
+      set(uniforms.v011, coords[1][i][j + 1].p)
+      set(uniforms.v111, coords[1][i + 1][j + 1].p)
+      const i0 = i === 0 ? 0 : i - 1
+      const i1 = i === segments - 1 ? i - 1 : i
+      const j0 = j === 0 ? 0 : j - 1
+      const j1 = j === segments - 1 ? j - 1 : j
+      const wx0 = i === 0 ? wl : wc
+      const wx1 = i === segments - 1 ? wr : wc
+      const wy0 = j === 0 ? wl : wc
+      const wy1 = j === segments - 1 ? wr : wc
+      mixset(uniforms.vx000, coords[0][i0][j].p, coords[0][i0 + 1][j].p, coords[0][i0 + 2][j].p, wx0)
+      mixset(uniforms.vx001, coords[1][i0][j].p, coords[1][i0 + 1][j].p, coords[1][i0 + 2][j].p, wx0)
+      mixset(uniforms.vx010, coords[0][i0][j + 1].p, coords[0][i0 + 1][j + 1].p, coords[0][i0 + 2][j + 1].p, wx0)
+      mixset(uniforms.vx011, coords[1][i0][j + 1].p, coords[1][i0 + 1][j + 1].p, coords[1][i0 + 2][j + 1].p, wx0)
+      mixset(uniforms.vx100, coords[0][i1][j].p, coords[0][i1 + 1][j].p, coords[0][i1 + 2][j].p, wx1)
+      mixset(uniforms.vx101, coords[1][i1][j].p, coords[1][i1 + 1][j].p, coords[1][i1 + 2][j].p, wx1)
+      mixset(uniforms.vx110, coords[0][i1][j + 1].p, coords[0][i1 + 1][j + 1].p, coords[0][i1 + 2][j + 1].p, wx1)
+      mixset(uniforms.vx111, coords[1][i1][j + 1].p, coords[1][i1 + 1][j + 1].p, coords[1][i1 + 2][j + 1].p, wx1)
+      mixset(uniforms.vy000, coords[0][i][j0].p, coords[0][i][j0 + 1].p, coords[0][i][j0 + 2].p, wy0)
+      mixset(uniforms.vy001, coords[1][i][j0].p, coords[1][i][j0 + 1].p, coords[1][i][j0 + 2].p, wy0)
+      mixset(uniforms.vy100, coords[0][i + 1][j0].p, coords[0][i + 1][j0 + 1].p, coords[0][i + 1][j0 + 2].p, wy0)
+      mixset(uniforms.vy101, coords[1][i + 1][j0].p, coords[1][i + 1][j0 + 1].p, coords[1][i + 1][j0 + 2].p, wy0)
+      mixset(uniforms.vy010, coords[0][i][j1].p, coords[0][i][j1 + 1].p, coords[0][i][j1 + 2].p, wy1)
+      mixset(uniforms.vy011, coords[1][i][j1].p, coords[1][i][j1 + 1].p, coords[1][i][j1 + 2].p, wy1)
+      mixset(uniforms.vy110, coords[0][i + 1][j1].p, coords[0][i + 1][j1 + 1].p, coords[0][i + 1][j1 + 2].p, wy1)
+      mixset(uniforms.vy111, coords[1][i + 1][j1].p, coords[1][i + 1][j1 + 1].p, coords[1][i + 1][j1 + 2].p, wy1)
+
+      const vz00 = {
+        x: coords[1][i][j].p.x - coords[0][i][j].p.x,
+        y: coords[1][i][j].p.y - coords[0][i][j].p.y,
+        z: coords[1][i][j].p.z - coords[0][i][j].p.z
+      }
+      const vz10 = {
+        x: coords[1][i + 1][j].p.x - coords[0][i + 1][j].p.x,
+        y: coords[1][i + 1][j].p.y - coords[0][i + 1][j].p.y,
+        z: coords[1][i + 1][j].p.z - coords[0][i + 1][j].p.z
+      }
+      const vz01 = {
+        x: coords[1][i][j + 1].p.x - coords[0][i][j + 1].p.x,
+        y: coords[1][i][j + 1].p.y - coords[0][i][j + 1].p.y,
+        z: coords[1][i][j + 1].p.z - coords[0][i][j + 1].p.z
+      }
+      const vz11 = {
+        x: coords[1][i + 1][j + 1].p.x - coords[0][i + 1][j + 1].p.x,
+        y: coords[1][i + 1][j + 1].p.y - coords[0][i + 1][j + 1].p.y,
+        z: coords[1][i + 1][j + 1].p.z - coords[0][i + 1][j + 1].p.z
+      }
+      set(uniforms.vz000, vz00)
+      set(uniforms.vz001, vz00)
+      set(uniforms.vz100, vz10)
+      set(uniforms.vz101, vz10)
+      set(uniforms.vz010, vz01)
+      set(uniforms.vz011, vz01)
+      set(uniforms.vz110, vz11)
+      set(uniforms.vz111, vz11)
+    })
   }
   addString(pos: Point3D, dir: Point3D, string: String3D) {
     this.strings.push({ pos, dir, string })
@@ -242,6 +353,7 @@ export class JellyGrid {
       const f = string.update(dt, { first: this.transformGridPoint(pos) })
       this.addGridForce(pos, f.first, -dt)
     })
+    this.updateMesh()
   }
   addGridForce({ x, y, z }: Point3D, f: Point3D, dt: number) {
     const { coords, segments } = this
@@ -315,7 +427,7 @@ export class JellyGrid {
       ctx.moveTo(p.x, p.z)
       for (let i = 0; i <= n; i++) {
         const th = 2 * Math.PI * i / n
-        const p = this.transformGridPoint({ x: r * Math.cos(th), y: r * Math.sin(th), z: (1 - (1 - r*r) ** 0.5) / 2 })
+        const p = this.transformGridPoint({ x: r * Math.cos(th), y: r * Math.sin(th), z: (1 - (1 - r*r) ** 0.5) })
         i === 0 ? ctx.moveTo(p.x, p.z) : ctx.lineTo(p.x, p.z)
       }
     }

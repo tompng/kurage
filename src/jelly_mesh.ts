@@ -1,5 +1,6 @@
 import vertexShader from './shaders/jelly.vert'
 import * as THREE from 'three'
+import { Point3D, normalize } from './math'
 
 const fragmentShader = `
 precision mediump float;
@@ -7,7 +8,10 @@ varying vec3 vposition;
 varying vec3 vnormal;
 varying vec2 vtexcoord;
 void main() {
-  gl_FragColor = vec4(1,1,1,0.1);
+  // gl_FragColor = vec4(1,1,1,0.2);
+  float d = dot(normalize(cameraPosition - vposition), normalize(vnormal));
+  d *= d;
+  gl_FragColor = vec4(vec3(0.4, 0.4, 0.8) * (1.0 - d) * d, 1);
 }
 `
 const coordIDs = ['000', '001', '010', '011', '100', '101', '110', '111'] as const
@@ -34,9 +38,10 @@ export function createJellyShader() {
     vertexShader,
     fragmentShader,
     uniforms: jellyUniforms(),
-    wireframe: true,
     side: THREE.DoubleSide,
-    transparent: true
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    // wireframe: true
   }) as Omit<THREE.ShaderMaterial, 'uniforms'> & { uniforms: JellyUniforms }
 }
 
@@ -110,4 +115,176 @@ export function createPlaneJellyGeomety(segments: number) {
   geometry.setAttribute('tan1', new THREE.BufferAttribute(new Float32Array(tan1s), 3))
   geometry.setAttribute('tan2', new THREE.BufferAttribute(new Float32Array(tan2s), 3))
   return geometry
+}
+
+function splitPolygon(polygon: Point3D[][], cx: number, cy: number, c: number) {
+  if (polygon.every(p => p[0].x * cx + p[0].y * cy + c >= 0)) return polygon
+  const output = []
+  for (let i = 0; i < polygon.length; i++) {
+    const a = polygon[i]
+    const b = polygon[(i + 1) % polygon.length]
+    const va = a[0].x * cx + a[0].y * cy + c
+    const vb = b[0].x * cx + b[0].y * cy + c
+    if (va < 0 && vb < 0) continue
+    if (va >= 0 && vb >= 0) {
+      output.push(a)
+    } else {
+      const c = a.map((ai, i) => {
+        const bi = b[i]
+        return {
+          x: (ai.x * vb - bi.x * va) / (vb - va),
+          y: (ai.y * vb - bi.y * va) / (vb - va),
+          z: (ai.z * vb - bi.z * va) / (vb - va)
+        }
+      })
+      if (va >= 0) output.push(a)
+      output.push(c)
+    }
+  }
+  return output
+}
+function polygonGridSplit(polygon: Point3D[][], x: number, y: number, size: number) {
+  polygon = splitPolygon(polygon, 1, 0, -x)
+  polygon = splitPolygon(polygon, -1, 0, x + size)
+  polygon = splitPolygon(polygon, 0, 1, -y)
+  return splitPolygon(polygon, 0, -1, y + size)
+}
+
+export function createJellyGeometryGrids(segments: number): (THREE.BufferGeometry | null)[][] {
+  type Point = { p: Point3D, t1: Point3D, t2: Point3D, uv: Point3D }
+  type Triangle = [Point, Point, Point]
+  type Attributes = { p: number[], t1: number[], t2: number[], uv: number[] }
+  const grids: Attributes[][] = []
+  for (let i = 0; i < segments; i++) {
+    grids[i] = []
+    for (let j = 0; j < segments; j++) grids[i][j] = { p: [], t1: [], t2: [], uv: [] }
+  }
+  function add([a, b, c]: Triangle) {
+    const ixmin = Math.floor(Math.max(0, Math.min(a.p.x, b.p.x, c.p.x) + segments / 2))
+    const iymin = Math.floor(Math.max(0, Math.min(a.p.y, b.p.y, c.p.y) + segments / 2))
+    const ixmax = Math.floor(Math.min(segments - 1, Math.max(a.p.x, b.p.x, c.p.x) + segments / 2))
+    const iymax = Math.floor(Math.min(segments - 1, Math.max(a.p.y, b.p.y, c.p.y) + segments / 2))
+    const polygon = [a, b, c].map(({ p, t1, t2, uv }) => [p, t1, t2, uv])
+    for (let ix = ixmin; ix <= ixmax; ix++) {
+      for (let iy = iymin; iy <= iymax; iy++) {
+        const x0 = ix - segments / 2
+        const y0 = iy - segments / 2
+        const polygon2 = polygonGridSplit(polygon, x0, y0, 1)
+        if (polygon2.length === 0) continue
+        const pa = polygon2[0]
+        for (let i = 1; i < polygon2.length - 1; i++) {
+          const pb = polygon2[i]
+          const pc = polygon2[i + 1]
+          const [t1s, t2s] = [1, 2].map(i => {
+            const [ta, tb, tc] = [pa[i], pb[i], pc[i]].map(normalize)
+            return [ta.x, ta.y, ta.z, tb.x, tb.y, tb.z, tc.x, tc.y, tc.z]
+          })
+          grids[ix][iy].p.push(
+            pa[0].x - x0, pa[0].y - y0, pa[0].z,
+            pb[0].x - x0, pb[0].y - y0, pb[0].z,
+            pc[0].x - x0, pc[0].y - y0, pc[0].z
+          )
+          grids[ix][iy].t1.push(...t1s)
+          grids[ix][iy].t2.push(...t2s)
+          grids[ix][iy].uv.push(pa[2].x, pa[2].y, pb[2].x, pb[2].y, pc[2].x, pc[2].y)
+        }
+      }
+    }
+  }
+
+  const N = 30
+  const f = (th: number) => {
+    const r = Math.sin(th)
+    const z = Math.cos(th)
+    return { r, z: z < 0 ? z : z * r ** 32 }
+  }
+  const fs = [...new Array(N + 1)].map((_, i) => {
+    const th = Math.PI * i / N
+    const p = f(th)
+    if (i === 0 || i === N) p.r = 0
+    const dth = 0.001
+    const pa = f(th - dth)
+    const pb = f(th + dth)
+    return { ...p, dr: pb.r - pa.r, dz: pb.z - pa.z, l: 0 }
+  })
+  const zs = fs.map(p => p.z)
+  const zmin = Math.min(...zs)
+  const zmax = Math.max(...zs)
+  fs.forEach(p => {
+    p.r *= segments / 2
+    p.dr *= segments / 2
+    p.z = (p.z - zmin) / (zmax - zmin)
+    const l = Math.hypot(p.dr, p.dz / (zmax - zmin))
+    p.dr /= l
+    p.dz /= (zmax - zmin) * l
+  })
+  for (let i = 1; i < fs.length; i++) {
+    fs[i].l = fs[i - 1].l + Math.hypot(fs[i].r - fs[i - 1].r, fs[i].z - fs[i - 1].z)
+  }
+  const lmax = fs[fs.length - 1].l
+  const lscale = 2 * 0.9 / lmax
+  const arcCoords: Point[][] = []
+  for (let i = 1; i < N; i++) {
+    const pf = fs[i - 1]
+    const { r, z, dr, dz, l } = fs[i]
+    const nf = fs[i + 1]
+    const len = Math.min(nf.l - l, l - pf.z)
+    const n = Math.max(Math.round(2 * Math.PI * r / len / 8), 1) * 8
+    const arc: Point[] = []
+    for (let j = 0; j < n; j++) {
+      const th = 2 * Math.PI * j / n
+      const cos = Math.cos(th)
+      const sin = Math.sin(th)
+      arc.push({
+        p: { x: r * cos, y: r * sin, z },
+        t1: { x: dr * cos, y: dr * sin, z: dz },
+        t2: { x: sin, y: -cos, z: 0 },
+        uv: { x: l * lscale * cos + 0.5, y: l * lscale * cos + 0.5, z: 0 }
+      })
+    }
+    arcCoords.push(arc)
+  }
+  for (let i = 0; i < arcCoords.length - 1; i++) {
+    const arc1 = arcCoords[i]
+    const arc2 = arcCoords[i + 1]
+    let i1 = 0
+    let i2 = 0
+    while (i1 < arc1.length || i2 < arc2.length) {
+      if (i2 == arc2.length || i1 / arc1.length < i2 / arc2.length) {
+        add([arc1[i1 % arc1.length], arc2[i2 % arc2.length], arc1[++i1 % arc1.length]])
+      } else {
+        add([arc1[i1 % arc1.length], arc2[i2 % arc2.length], arc2[++i2 % arc2.length]])
+      }
+    }
+  }
+  const firstArc = arcCoords[0]
+  const lastArc = arcCoords[arcCoords.length - 1]
+  for (const arc of [firstArc, lastArc]) {
+    const { r, z, dr, dz, l } = arc === firstArc ? fs[0] : fs[fs.length - 1]
+    for (let i = 0; i < arc.length; i++) {
+      const th = 2 * Math.PI * (i + 0.5) / arc.length
+      const cos = Math.cos(th)
+      const sin = Math.sin(th)
+      const p = {
+        p: { x: r * cos, y: r * sin, z },
+        t1: { x: dr * cos, y: dr * sin, z: dz },
+        t2: { x: sin, y: -cos, z: 0 },
+        uv: { x: l * lscale * cos + 0.5, y: l * lscale * cos + 0.5, z: 0 }
+      }
+      const j = (i + 1) % arc.length
+      add(arc === firstArc ? [p, arc[i], arc[j]] : [arc[i], p, arc[j]])
+    }
+  }
+  return grids.map(line => {
+    return line.map(({ p, t1, t2, uv }) => {
+      const faces = p.length / 9
+      if (faces === 0) return null
+      const geometry = new THREE.BufferGeometry()
+      geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(p), 3))
+      geometry.setAttribute('tan1', new THREE.BufferAttribute(new Float32Array(t1), 3))
+      geometry.setAttribute('tan2', new THREE.BufferAttribute(new Float32Array(t2), 3))
+      geometry.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(uv), 2))
+      return geometry
+    })
+  })
 }

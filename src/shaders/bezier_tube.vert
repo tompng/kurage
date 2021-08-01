@@ -13,6 +13,7 @@ void main() {
   vec3 cameraPosition = (viewMatrix * vec4(globalPosition, 1)).xyz;
   vec3 radialPosition = vec3(position.xy * radius / cameraPosition.z, 0);
   gl_Position = projectionMatrix * vec4(cameraPosition + radialPosition, 1);
-  vBrightness = 1.0 / (viewMatrix * vec4((instanceMatrix * vec4(0.125, 0.375, 0.375, 0.125)).xyz, 1)).z;
+  float dist = -(viewMatrix * vec4((instanceMatrix * vec4(0.125, 0.375, 0.375, 0.125)).xyz, 1)).z;
+  vBrightness = pow(0.8, dist);
   vTParameter = t;
 }
