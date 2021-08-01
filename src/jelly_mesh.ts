@@ -8,10 +8,9 @@ varying vec3 vposition;
 varying vec3 vnormal;
 varying vec2 vtexcoord;
 void main() {
-  // gl_FragColor = vec4(1,1,1,0.2);
   float d = dot(normalize(cameraPosition - vposition), normalize(vnormal));
   d *= d;
-  gl_FragColor = vec4(vec3(0.4, 0.4, 0.8) * (1.0 - d) * d, 1);
+  gl_FragColor = vec4(vec3(1.5, 1.5, 2) * (1.0 - d) * d, 1);
 }
 `
 const coordIDs = ['000', '001', '010', '011', '100', '101', '110', '111'] as const
@@ -192,7 +191,7 @@ export function createJellyGeometryGrids(segments: number): (THREE.BufferGeometr
     }
   }
 
-  const N = 30
+  const N = 10
   const f = (th: number) => {
     const r = Math.sin(th)
     const z = Math.cos(th)

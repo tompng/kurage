@@ -8,10 +8,10 @@ function assignGlobal(data: Record<string, any>) {
   for (const i in data) (window as any)[i] = data[i]
 }
 const size = 800
-const canvas = document.createElement('canvas')
-canvas.width = size
-canvas.height = size
+const renderer = new THREE.WebGLRenderer()
+const canvas = renderer.domElement
 document.body.appendChild(canvas)
+renderer.setSize(size, size)
 const mouse = { x: 0.5, y: 0.5 }
 document.body.onpointerdown = document.body.onpointermove = e => {
   mouse.x = (e.pageX - canvas.offsetLeft) / canvas.width - 0.5
@@ -41,23 +41,9 @@ for (let i = 0; i < 64; i++) {
   )
 }
 
-
-function render2d() {
-  const ctx = canvas.getContext('2d')!
-  ctx.save()
-  ctx.clearRect(0, 0, canvas.width, canvas.height)
-  ctx.scale(canvas.width, canvas.height)
-  ctx.translate(0.5, 0.5)
-  ctx.scale(1, -1)
-  ctx.lineWidth = 0.002
-  jelly.update(performance.now() / 1000)
-  // jelly.renderToCanvas(ctx)
-
-  ctx.restore()
-}
 function frame() {
+  jelly.update(performance.now() / 1000)
   render()
-  render2d()
   requestAnimationFrame(frame)
 }
 requestAnimationFrame(frame)
@@ -65,10 +51,6 @@ requestAnimationFrame(frame)
 assignGlobal({ jelly })
 
 
-const renderer = new THREE.WebGLRenderer()
-document.body.appendChild(renderer.domElement)
-renderer.domElement.style.cssText = 'position: fixed; opacity: 0.8;left:0;top:0'
-renderer.setSize(size, size)
 const target = new THREE.WebGLRenderTarget(size, size, {
   minFilter: THREE.NearestFilter,
   magFilter: THREE.NearestFilter,
@@ -111,7 +93,7 @@ function render() {
         ]
       }),
       0.04,
-      new THREE.Color(0x444488)
+      new THREE.Color(0xBFBFFF)
     )
   })
   renderer.render(scene, camera)
