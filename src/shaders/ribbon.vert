@@ -50,6 +50,6 @@ void main() {
     b.y * (a0.z * vy0 + a1.z * vy1) +
     b0.z * vz0 + b1.z * vz1
   );
-  gl_Position = projectionMatrix * (viewMatrix * vec3(vposition, 1));
+  gl_Position = projectionMatrix * (viewMatrix * vec4(vposition, 1));
   vtexcoord = uv.xy;  
 }

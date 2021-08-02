@@ -1,18 +1,8 @@
 import vertexShader from './shaders/jelly.vert'
+import fragmentShader from './shaders/jelly.frag'
 import * as THREE from 'three'
 import { Point3D, normalize } from './math'
 
-const fragmentShader = `
-precision mediump float;
-varying vec3 vposition;
-varying vec3 vnormal;
-varying vec2 vtexcoord;
-void main() {
-  float d = dot(normalize(cameraPosition - vposition), normalize(vnormal));
-  d *= d;
-  gl_FragColor = vec4(vec3(1.5, 1.5, 2) * (1.0 - d) * d, 1);
-}
-`
 const coordIDs = ['000', '001', '010', '011', '100', '101', '110', '111'] as const
 type CoordID = '000' | '001' | '010' | '011' | '100' | '101' | '110' | '111'
 type PositionUniformKey = `v${CoordID}`
@@ -40,7 +30,6 @@ export function createJellyShader() {
     side: THREE.DoubleSide,
     blending: THREE.AdditiveBlending,
     depthWrite: false,
-    // wireframe: true
   }) as Omit<THREE.ShaderMaterial, 'uniforms'> & { uniforms: JellyUniforms }
 }
 
