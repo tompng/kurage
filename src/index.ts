@@ -3,6 +3,7 @@ import { JellyGrid } from './grid_jelly'
 import * as THREE from 'three'
 import { Point3D, normalize, cross, scale as vectorScale, add as vectorAdd, sub as vectorSub } from './math'
 import { BezierSegment, BezierStringRenderer } from './string_mesh'
+import { RibbonShape } from './ribbon_mesh'
 
 function assignGlobal(data: Record<string, any>) {
   for (const i in data) (window as any)[i] = data[i]
@@ -19,6 +20,17 @@ document.body.onpointerdown = document.body.onpointermove = e => {
 }
 
 const jelly = new JellyGrid(6)
+
+for (let i = 0; i < 4; i++) {
+  const th = 2 * Math.PI * i / 4
+  const cos = Math.cos(th)
+  const sin = Math.sin(th)
+  jelly.addString(
+    { x: 0.3 * cos, y: 0.3 * sin, z: 1 },
+    { x: cos, y: sin, z: 10 },
+    new String3D(20, 2, 1, 1)
+  )
+}
 for (let i = 0; i < 4; i++) {
   const th = 2 * Math.PI * i / 4
   const cos = Math.cos(th)
@@ -43,6 +55,7 @@ for (let i = 0; i < 64; i++) {
 
 function frame() {
   jelly.update(performance.now() / 1000)
+  // ribbonshape.updateDebug()
   render()
   requestAnimationFrame(frame)
 }
@@ -65,8 +78,6 @@ targetRenderScene.add(targetRenderMesh)
 const scene = new THREE.Scene()
 jelly.addToScene(scene)
 const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 100)
-camera.position.set(0, -4, 0)
-camera.lookAt(0, 0, 0)
 
 const stringRenderer = new BezierStringRenderer(8, 5)
 
@@ -90,11 +101,19 @@ const clovers = [0, 1, 2, 3].map(i => {
   return line
 })
 
+const ribbonshapes = [0,1,2,3].map(i => new RibbonShape(jelly.strings[i].string.numSegments, 0, 0))
+ribbonshapes.forEach(r => r.addToScene(scene))
+
 function render() {
   renderer.setRenderTarget(target)
   renderer.autoClear = false
   renderer.clearColor()
   renderer.clearDepth()
+
+  const camth = performance.now() / 10000
+  camera.up.set(0, 0, 1)
+  camera.position.set(4 * Math.sin(camth), -4 * Math.cos(camth), 0)
+  camera.lookAt(0, 0, 0)
 
   clovers.forEach(line => {
     const gline = line.map(p => jelly.transformGridPoint(p))
@@ -116,7 +135,8 @@ function render() {
     )
   })
 
-  jelly.strings.forEach(({ string }) => {
+  jelly.strings.forEach(({ string }, i) => {
+    if (i < 4) return
     stringRenderer.render(renderer, camera,
       [...new Array(string.numSegments)].map((_, i) => {
         const ai = Math.max(i - 1, 0)
@@ -136,6 +156,14 @@ function render() {
       new THREE.Color(0xBFBFFF)
     )
   })
+
+  const center = jelly.transformGridPoint({ x: 0, y: 0, z: 0 })
+  jelly.strings[0]
+  ribbonshapes.forEach((r, i) => {
+    const ribbonDir = vectorSub(center, jelly.transformGridPoint(jelly.strings[i].pos))
+    r.update(jelly.strings[i].string, ribbonDir)
+  })
+
   renderer.render(scene, camera)
   renderer.setRenderTarget(null)
   renderer.render(targetRenderScene, targetRenderCamera)
