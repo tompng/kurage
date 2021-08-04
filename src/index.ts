@@ -1,7 +1,7 @@
 import { Ribbon, String3D } from './string'
 import { JellyGrid } from './grid_jelly'
 import * as THREE from 'three'
-import { Point3D, normalize, cross, scale as vectorScale, add as vectorAdd, sub as vectorSub } from './math'
+import { Matrix3, Point3D, normalize, cross, dot, scale as vectorScale, add as vectorAdd, sub as vectorSub } from './math'
 import { BezierSegment, BezierStringRenderer } from './string_mesh'
 import { RibbonShape } from './ribbon_mesh'
 
@@ -54,19 +54,28 @@ for (let i = 0; i < 64; i++) {
 }
 
 function frame() {
-  const top = jelly.transformLocalPoint({ x: 0, y: 0, z: -1 })
-  const dir = normalize(vectorSub(top, jelly.position))
-  jelly.velocity.x += dir.x * 0.1
-  jelly.velocity.y += dir.y * 0.1
-  jelly.velocity.z += dir.z * 0.1
+  const currentDir = normalize(vectorSub(jelly.transformLocalPoint({ x: 0, y: 0, z: -1 }), jelly.position))
+  assignGlobal({ currentDir })
+  const targetDir = normalize({ x: mouse.x, y: 0, z: mouse.y })
+  const rot = normalize(cross(currentDir, targetDir))
+  if (!isNaN(rot.x)) {
+    let theta = Math.atan(Math.acos(dot(currentDir, targetDir))) * 0.1
+    const dt = 0.1
+    jelly.velocity.x += currentDir.x * dt
+    jelly.velocity.y += currentDir.y * dt
+    jelly.velocity.z += currentDir.z * dt
+    // jelly.rotation = Matrix3.fromRotation(rot, theta).mult(jelly.rotation)
+    jelly.momentum.x = jelly.momentum.x * 0.9 + rot.x * theta
+    jelly.momentum.y = jelly.momentum.y * 0.9 + rot.y * theta
+    jelly.momentum.z = jelly.momentum.z * 0.9 + rot.z * theta
+  }
   jelly.update(performance.now() / 1000)
-  // ribbonshape.updateDebug()
   render()
   requestAnimationFrame(frame)
 }
 requestAnimationFrame(frame)
 
-assignGlobal({ jelly })
+assignGlobal({ jelly, mouse })
 
 
 const target = new THREE.WebGLRenderTarget(size, size, {
