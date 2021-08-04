@@ -54,6 +54,11 @@ for (let i = 0; i < 64; i++) {
 }
 
 function frame() {
+  const top = jelly.transformLocalPoint({ x: 0, y: 0, z: -1 })
+  const dir = normalize(vectorSub(top, jelly.position))
+  jelly.velocity.x += dir.x * 0.1
+  jelly.velocity.y += dir.y * 0.1
+  jelly.velocity.z += dir.z * 0.1
   jelly.update(performance.now() / 1000)
   // ribbonshape.updateDebug()
   render()
@@ -104,16 +109,57 @@ const clovers = [0, 1, 2, 3].map(i => {
 const ribbonshapes = [0,1,2,3].map(i => new RibbonShape(jelly.strings[i].string.numSegments, 0, 0))
 ribbonshapes.forEach(r => r.addToScene(scene))
 
+class SmoothPoint3D {
+  v1: Point3D = { x: 0, y: 0, z: 0 }
+  v2: Point3D = { x: 0, y: 0, z: 0 }
+  v3: Point3D = { x: 0, y: 0, z: 0 }
+  vscale: number
+  exponent: number
+  x = 0
+  y = 0
+  z = 0
+  constructor(position: Point3D, stepScale: number) {
+    const e = Math.exp(-1 / stepScale)
+    this.exponent = e
+    this.vscale = 1 / (1 / (1 - e) - 2 / (1 - e**2) + 1 / (1 - e**3))
+    this.reset(position)
+  }
+  update({ x, y, z }: Point3D) {
+    const { v1, v2, v3, vscale, exponent: e } = this
+    for (const [v, ex] of [[v1, e], [v2, e**2], [v3, e**3]] as const) {
+      v.x = v.x * ex + x
+      v.y = v.y * ex + y
+      v.z = v.z * ex + z
+    }
+    this.x = (v1.x - 2 * v2.x + v3.x) * vscale
+    this.y = (v1.y - 2 * v2.y + v3.y) * vscale
+    this.z = (v1.z - 2 * v2.z + v3.z) * vscale
+  }
+  reset({ x, y, z }: Point3D) {
+    const { v1, v2, v3, exponent: e } = this
+    for (const [v, ex] of [[v1, e], [v2, e**2], [v3, e**3]] as const) {
+      v.x = x / (1 - ex)
+      v.y = y / (1 - ex)
+      v.z = z / (1 - ex)
+    }
+    this.x = x
+    this.y = y
+    this.z = z
+  }
+}
+
+
+const centerPosition = new SmoothPoint3D({ x: 0, y: 0, z: 0 }, 60)
+
 function render() {
   renderer.setRenderTarget(target)
   renderer.autoClear = false
   renderer.clearColor()
   renderer.clearDepth()
-
-  const camth = performance.now() / 10000
+  centerPosition.update(jelly.position)
   camera.up.set(0, 0, 1)
-  camera.position.set(4 * Math.sin(camth), -4 * Math.cos(camth), 0)
-  camera.lookAt(0, 0, 0)
+  camera.position.set(centerPosition.x, centerPosition.y - 4, centerPosition.z)
+  camera.lookAt(centerPosition.x, centerPosition.y, centerPosition.z)
 
   clovers.forEach(line => {
     const gline = line.map(p => jelly.transformGridPoint(p))

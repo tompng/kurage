@@ -138,6 +138,7 @@ export class RibbonShape {
         depthWrite: false,
       })
       const mesh = new Mesh(geometry, material)
+      mesh.frustumCulled = false
       return { mesh, uniforms, material }
     })
   }
@@ -146,7 +147,7 @@ export class RibbonShape {
   }
   update(string: String3D, dir: Point3D) {
     const { numSegments, segments, ribbon } = this
-    ribbon.update(dir, string.directions, 0.2)
+    ribbon.update(dir, string.directions, 0.05)
     for (let i = 0; i <= numSegments; i++) {
       const ia = Math.max(0, i - 1)
       const ib = Math.min(i + 1, numSegments - 1)

@@ -73,13 +73,15 @@ export class JellyGrid {
       return geometries.forEach((geometry, j) => {
         if (!geometry) return
         const material = createJellyShader()
+        const mesh = new THREE.Mesh(geometry, material)
+        mesh.frustumCulled = false
         this.cells.push({
           i,
           j,
           geometry,
           material,
           uniforms: material.uniforms,
-          mesh: new THREE.Mesh(geometry, material)
+          mesh
         })
       })
     })
