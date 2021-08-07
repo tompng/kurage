@@ -75,7 +75,7 @@ function frame() {
 }
 requestAnimationFrame(frame)
 
-assignGlobal({ jelly, mouse })
+assignGlobal({ jelly, mouse, renderer })
 
 
 const target = new THREE.WebGLRenderTarget(size, size, {
@@ -172,7 +172,9 @@ function render() {
 
   clovers.forEach(line => {
     const gline = line.map(p => jelly.transformGridPoint(p))
-    stringRenderer.render(renderer, camera,
+    stringRenderer.request(
+      0.03,
+      0x444444,
       [...new Array(gline.length - 3)].map((_, i) => {
         const a = gline[i]
         const b = gline[i + 1]
@@ -185,14 +187,14 @@ function render() {
           c
         ]
       }),
-      0.03,
-      new THREE.Color(0x444444)
     )
   })
 
   jelly.strings.forEach(({ string }, i) => {
     if (i < 4) return
-    stringRenderer.render(renderer, camera,
+    stringRenderer.request(
+      0.01,
+      0xBFBFFF,
       [...new Array(string.numSegments)].map((_, i) => {
         const ai = Math.max(i - 1, 0)
         const di = Math.min(i + 2, string.numSegments)
@@ -206,12 +208,10 @@ function render() {
           vectorAdd(c, vectorScale(vectorSub(d, b), -1 / 6)),
           c
         ]
-      }),
-      0.01,
-      new THREE.Color(0xBFBFFF)
+      })
     )
   })
-
+  stringRenderer.render(renderer, camera)
   const center = jelly.transformGridPoint({ x: 0, y: 0, z: 0 })
   jelly.strings[0]
   ribbonshapes.forEach((r, i) => {
