@@ -4,6 +4,7 @@ import * as THREE from 'three'
 import { Matrix3, Point3D, normalize, cross, dot, scale as vectorScale, add as vectorAdd, sub as vectorSub } from './math'
 import { BezierSegment, BezierStringRenderer } from './string_mesh'
 import { RibbonShape } from './ribbon_mesh'
+import { OceanDust } from './ocean'
 
 function assignGlobal(data: Record<string, any>) {
   for (const i in data) (window as any)[i] = data[i]
@@ -20,6 +21,7 @@ document.body.onpointerdown = document.body.onpointermove = e => {
 }
 
 const jelly = new JellyGrid(6)
+const ocean = new OceanDust(256)
 
 for (let i = 0; i < 4; i++) {
   const th = 2 * Math.PI * i / 4
@@ -58,9 +60,13 @@ function frame() {
   assignGlobal({ currentDir })
   const targetDir = normalize({ x: mouse.x, y: 0, z: mouse.y })
   const rot = normalize(cross(currentDir, targetDir))
+  const vdot = dot(currentDir, jelly.velocity)
+  jelly.velocity.x = jelly.velocity.x * 0.5 + 0.5 * vdot * currentDir.x
+  jelly.velocity.y = jelly.velocity.y * 0.5 + 0.5 * vdot * currentDir.y
+  jelly.velocity.z = jelly.velocity.z * 0.5 + 0.5 * vdot * currentDir.z
   if (!isNaN(rot.x)) {
     let theta = Math.atan(Math.acos(dot(currentDir, targetDir))) * 0.1
-    const dt = 0.1
+    const dt = 0.02
     jelly.velocity.x += currentDir.x * dt
     jelly.velocity.y += currentDir.y * dt
     jelly.velocity.z += currentDir.z * dt
@@ -158,7 +164,7 @@ class SmoothPoint3D {
 }
 
 
-const centerPosition = new SmoothPoint3D({ x: 0, y: 0, z: 0 }, 60)
+const centerPosition = new SmoothPoint3D({ x: 0, y: 0, z: 0 }, 200)
 
 function render() {
   renderer.setRenderTarget(target)
@@ -218,8 +224,9 @@ function render() {
     const ribbonDir = vectorSub(center, jelly.transformGridPoint(jelly.strings[i].pos))
     r.update(jelly.strings[i].string, ribbonDir)
   })
-
   renderer.render(scene, camera)
+  ocean.render(renderer, camera)
+
   renderer.setRenderTarget(null)
   renderer.render(targetRenderScene, targetRenderCamera)
 }
