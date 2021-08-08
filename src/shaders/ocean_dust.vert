@@ -3,7 +3,7 @@ uniform float maxDistance;
 void main() {
   vec4 vpos = viewMatrix * (modelMatrix * vec4(position, 1));
   float dist = length(vpos.xyz);
-  float size = 8.0 / vpos.w; // TODO: consider resolution
+  float size = -12.0 / vpos.z; // TODO: consider resolution
   float isize = max(ceil(size), 1.0);
   float sizeRatio = size / isize;
   gl_PointSize = min(isize, 16.0);
