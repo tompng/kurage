@@ -33,78 +33,6 @@ export function createJellyShader() {
   }) as Omit<THREE.ShaderMaterial, 'uniforms'> & { uniforms: JellyUniforms }
 }
 
-export function createJellyGeomety(width: number, radialSegments: number, outlineSegments: number) {
-  const positions: number[] = []
-  const tan1s: number[] = []
-  const tan2s: number[] = []
-  type XY = [number, number]
-  const r = Math.hypot(1, width)
-  const tan1u = [1, 0, 0]
-  const tan1d = [-1 / r, -width / r, 0]
-  const tan2 = [0, 1, 0]
-  const add = ([ax, ay]: XY, [bx, by]: XY, [cx, cy]: XY) => {
-    tan1s.push(...tan1u, ...tan1u, ...tan1u)
-    tan1s.push(...tan1d, ...tan1d, ...tan1d)
-    tan2s.push(...tan2, ...tan2, ...tan2)
-    tan2s.push(...tan2, ...tan2, ...tan2)
-    positions.push(ax, ay, 1, bx, by, 1, cx, cy, 1)
-    positions.push(ax, ay, 1 - width * (1 - ax ** 2))
-    positions.push(bx, by, 1 - width * (1 - bx ** 2))
-    positions.push(cx, cy, 1 - width * (1 - cx ** 2))
-  }
-  let prevSegments: XY[] = [[0, 0], [0, 1]]
-  for (let i = 1; i <= radialSegments; i++) {
-    const x = i / radialSegments
-    const n = Math.round((radialSegments + (outlineSegments - 1) * i) / radialSegments)
-    const nextSegments: XY[] = []
-    for (let j = 0; j <= n; j++) nextSegments.push([x, j / n])
-    let pi = 0
-    let ni = 0
-    while (pi + 1 < prevSegments.length || ni < n) {
-      if (pi / (prevSegments.length - 1) < ni / n) {
-        add(prevSegments[pi], nextSegments[ni], prevSegments[++pi])
-      } else {
-        add(prevSegments[pi], nextSegments[ni], nextSegments[++ni])
-      }
-    }
-    prevSegments = nextSegments
-  }
-  const geometry = new THREE.BufferGeometry()
-  geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(positions), 3))
-  geometry.setAttribute('tan1', new THREE.BufferAttribute(new Float32Array(tan1s), 3))
-  geometry.setAttribute('tan2', new THREE.BufferAttribute(new Float32Array(tan2s), 3))
-  return geometry
-}
-
-export function createPlaneJellyGeomety(segments: number) {
-  const positions: number[] = []
-  const tan1s: number[] = []
-  const tan2s: number[] = []
-  type XY = [number, number]
-  const tan1 = [1, 0, 0]
-  const tan2 = [0, 1, 0]
-  const add = ([ax, ay]: XY, [bx, by]: XY, [cx, cy]: XY) => {
-    tan1s.push(...tan1, ...tan1, ...tan1)
-    tan2s.push(...tan2, ...tan2, ...tan2)
-    positions.push(ax, ay, 1, bx, by, 1, cx, cy, 1)
-  }
-  for (let i = 0; i < segments; i++) {
-    for (let j = 0; j < segments; j++) {
-      const x0 = i / segments
-      const y0 = j / segments
-      const x1 = (i + 1) / segments
-      const y1 = (j + 1) / segments
-      add([x0, y0], [x1, y0], [x0, y1])
-      add([x1, y0], [x1, y1], [x0, y1])
-    }
-  }
-  const geometry = new THREE.BufferGeometry()
-  geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(positions), 3))
-  geometry.setAttribute('tan1', new THREE.BufferAttribute(new Float32Array(tan1s), 3))
-  geometry.setAttribute('tan2', new THREE.BufferAttribute(new Float32Array(tan2s), 3))
-  return geometry
-}
-
 function splitPolygon(polygon: Point3D[][], cx: number, cy: number, c: number) {
   if (polygon.every(p => p[0].x * cx + p[0].y * cy + c >= 0)) return polygon
   const output = []
@@ -268,10 +196,10 @@ export function createJellyGeometryGrids(segments: number): (THREE.BufferGeometr
       const faces = p.length / 9
       if (faces === 0) return null
       const geometry = new THREE.BufferGeometry()
-      geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(p), 3))
-      geometry.setAttribute('tan1', new THREE.BufferAttribute(new Float32Array(t1), 3))
-      geometry.setAttribute('tan2', new THREE.BufferAttribute(new Float32Array(t2), 3))
-      geometry.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(uv), 2))
+      geometry.setAttribute('position', new THREE.Float32BufferAttribute(p, 3))
+      geometry.setAttribute('tan1', new THREE.Float32BufferAttribute(t1, 3))
+      geometry.setAttribute('tan2', new THREE.Float32BufferAttribute(t2, 3))
+      geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2))
       return geometry
     })
   })

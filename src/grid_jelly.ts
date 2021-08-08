@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { createPlaneJellyGeomety, createJellyShader, JellyUniforms, createJellyGeometryGrids } from './jelly_mesh'
+import { createJellyShader, JellyUniforms, createJellyGeometryGrids } from './jelly_mesh'
 import {
   Point3D, Matrix3, distance, cross,
   normalize as vectorNormalize,
@@ -102,7 +102,7 @@ export class JellyGrid {
       v.value.set(
         a.x * wa + b.x * wb + c.x * wc,
         a.y * wa + b.y * wb + c.y * wc,
-        a.z * wa + b.z * wb + c.z * wc,
+        a.z * wa + b.z * wb + c.z * wc
       )
     }
     const wc = [-0.5, 0, 0.5] as const

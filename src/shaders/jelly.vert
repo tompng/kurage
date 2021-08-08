@@ -1,4 +1,4 @@
-precision mediump float;
+precision highp float;
 uniform vec3 v000, v001, v010, v011, v100, v101, v110, v111;
 uniform vec3 vx000, vx001, vx010, vx011, vx100, vx101, vx110, vx111;
 uniform vec3 vy000, vy001, vy010, vy011, vy100, vy101, vy110, vy111;
