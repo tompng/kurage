@@ -9,43 +9,46 @@ vec3 tangentTransform(vec3 p, vec3 delta) {
   vec3 a0 = 1.0 - a1;
   vec3 b0 = p * (1.0 - p) * (1.0 - p);
   vec3 b1 = p * p * (p - 1.0);
-  vec3 da1 = 6.0 * p * (1.0 - p) * delta;
-  vec3 da0 = -da1;
+  vec3 da = 6.0 * p * (1.0 - p) * delta;
   vec3 db0 = (1.0 + p * (3.0 * p - 4.0)) * delta;
   vec3 db1 = p * (3.0 * p - 2.0) * delta;
+  float daaa = da.x * a1.y * a1.z + a1.x * da.y * a1.z + a1.x * a1.y * da.z;
+  float daxinv = da.x * (1.0 - a1.y - a1.z);
+  float dayinv = da.y * (1.0 - a1.z - a1.x);
+  float dazinv = da.z * (1.0 - a1.x - a1.y);
   return (
-    v000 * (da0.x * a0.y * a0.z + a0.x * da0.y * a0.z + a0.x * a0.y * da0.z)+
-    v001 * (da0.x * a0.y * a1.z + a0.x * da0.y * a1.z + a0.x * a0.y * da1.z)+
-    v010 * (da0.x * a1.y * a0.z + a0.x * da1.y * a0.z + a0.x * a1.y * da0.z)+
-    v011 * (da0.x * a1.y * a1.z + a0.x * da1.y * a1.z + a0.x * a1.y * da1.z)+
-    v100 * (da1.x * a0.y * a0.z + a1.x * da0.y * a0.z + a1.x * a0.y * da0.z)+
-    v101 * (da1.x * a0.y * a1.z + a1.x * da0.y * a1.z + a1.x * a0.y * da1.z)+
-    v110 * (da1.x * a1.y * a0.z + a1.x * da1.y * a0.z + a1.x * a1.y * da0.z)+
-    v111 * (da1.x * a1.y * a1.z + a1.x * da1.y * a1.z + a1.x * a1.y * da1.z)+
-    vx000 * (db0.x * a0.y * a0.z + b0.x * da0.y * a0.z + b0.x * a0.y * da0.z)+
-    vx001 * (db0.x * a0.y * a1.z + b0.x * da0.y * a1.z + b0.x * a0.y * da1.z)+
-    vx010 * (db0.x * a1.y * a0.z + b0.x * da1.y * a0.z + b0.x * a1.y * da0.z)+
-    vx011 * (db0.x * a1.y * a1.z + b0.x * da1.y * a1.z + b0.x * a1.y * da1.z)+
-    vx100 * (db1.x * a0.y * a0.z + b1.x * da0.y * a0.z + b1.x * a0.y * da0.z)+
-    vx101 * (db1.x * a0.y * a1.z + b1.x * da0.y * a1.z + b1.x * a0.y * da1.z)+
-    vx110 * (db1.x * a1.y * a0.z + b1.x * da1.y * a0.z + b1.x * a1.y * da0.z)+
-    vx111 * (db1.x * a1.y * a1.z + b1.x * da1.y * a1.z + b1.x * a1.y * da1.z)+
-    vy000 * (da0.x * b0.y * a0.z + a0.x * db0.y * a0.z + a0.x * b0.y * da0.z)+
-    vy001 * (da0.x * b0.y * a1.z + a0.x * db0.y * a1.z + a0.x * b0.y * da1.z)+
-    vy010 * (da0.x * b1.y * a0.z + a0.x * db1.y * a0.z + a0.x * b1.y * da0.z)+
-    vy011 * (da0.x * b1.y * a1.z + a0.x * db1.y * a1.z + a0.x * b1.y * da1.z)+
-    vy100 * (da1.x * b0.y * a0.z + a1.x * db0.y * a0.z + a1.x * b0.y * da0.z)+
-    vy101 * (da1.x * b0.y * a1.z + a1.x * db0.y * a1.z + a1.x * b0.y * da1.z)+
-    vy110 * (da1.x * b1.y * a0.z + a1.x * db1.y * a0.z + a1.x * b1.y * da0.z)+
-    vy111 * (da1.x * b1.y * a1.z + a1.x * db1.y * a1.z + a1.x * b1.y * da1.z)+
-    vz000 * (da0.x * a0.y * b0.z + a0.x * da0.y * b0.z + a0.x * a0.y * db0.z)+
-    vz001 * (da0.x * a0.y * b1.z + a0.x * da0.y * b1.z + a0.x * a0.y * db1.z)+
-    vz010 * (da0.x * a1.y * b0.z + a0.x * da1.y * b0.z + a0.x * a1.y * db0.z)+
-    vz011 * (da0.x * a1.y * b1.z + a0.x * da1.y * b1.z + a0.x * a1.y * db1.z)+
-    vz100 * (da1.x * a0.y * b0.z + a1.x * da0.y * b0.z + a1.x * a0.y * db0.z)+
-    vz101 * (da1.x * a0.y * b1.z + a1.x * da0.y * b1.z + a1.x * a0.y * db1.z)+
-    vz110 * (da1.x * a1.y * b0.z + a1.x * da1.y * b0.z + a1.x * a1.y * db0.z)+
-    vz111 * (da1.x * a1.y * b1.z + a1.x * da1.y * b1.z + a1.x * a1.y * db1.z)
+    v000 * (-daaa - daxinv - dayinv - dazinv) +
+    v001 * (daaa - da.x * a1.z - da.y * a1.z + dazinv) +
+    v010 * (daaa - da.x * a1.y + dayinv - a1.y * da.z) +
+    v011 * (-daaa + da.y * a1.z + a1.y * da.z) +
+    v100 * (daaa + daxinv - a1.x * da.y - a1.x * da.z) +
+    v101 * (-daaa + da.x * a1.z + a1.x * da.z) +
+    v110 * (-daaa + da.x * a1.y + a1.x * da.y) +
+    v111 * daaa +
+    vx000 * (+db0.x * a0.y * a0.z - b0.x * da.y * a0.z - b0.x * a0.y * da.z)+
+    vx001 * (+db0.x * a0.y * a1.z - b0.x * da.y * a1.z + b0.x * a0.y * da.z)+
+    vx010 * (+db0.x * a1.y * a0.z + b0.x * da.y * a0.z - b0.x * a1.y * da.z)+
+    vx011 * (+db0.x * a1.y * a1.z + b0.x * da.y * a1.z + b0.x * a1.y * da.z)+
+    vx100 * (+db1.x * a0.y * a0.z - b1.x * da.y * a0.z - b1.x * a0.y * da.z)+
+    vx101 * (+db1.x * a0.y * a1.z - b1.x * da.y * a1.z + b1.x * a0.y * da.z)+
+    vx110 * (+db1.x * a1.y * a0.z + b1.x * da.y * a0.z - b1.x * a1.y * da.z)+
+    vx111 * (+db1.x * a1.y * a1.z + b1.x * da.y * a1.z + b1.x * a1.y * da.z)+
+    vy000 * (-da.x * b0.y * a0.z + a0.x * db0.y * a0.z - a0.x * b0.y * da.z)+
+    vy001 * (-da.x * b0.y * a1.z + a0.x * db0.y * a1.z + a0.x * b0.y * da.z)+
+    vy010 * (-da.x * b1.y * a0.z + a0.x * db1.y * a0.z - a0.x * b1.y * da.z)+
+    vy011 * (-da.x * b1.y * a1.z + a0.x * db1.y * a1.z + a0.x * b1.y * da.z)+
+    vy100 * (+da.x * b0.y * a0.z + a1.x * db0.y * a0.z - a1.x * b0.y * da.z)+
+    vy101 * (+da.x * b0.y * a1.z + a1.x * db0.y * a1.z + a1.x * b0.y * da.z)+
+    vy110 * (+da.x * b1.y * a0.z + a1.x * db1.y * a0.z - a1.x * b1.y * da.z)+
+    vy111 * (+da.x * b1.y * a1.z + a1.x * db1.y * a1.z + a1.x * b1.y * da.z)+
+    vz000 * (-da.x * a0.y * b0.z - a0.x * da.y * b0.z + a0.x * a0.y * db0.z)+
+    vz001 * (-da.x * a0.y * b1.z - a0.x * da.y * b1.z + a0.x * a0.y * db1.z)+
+    vz010 * (-da.x * a1.y * b0.z + a0.x * da.y * b0.z + a0.x * a1.y * db0.z)+
+    vz011 * (-da.x * a1.y * b1.z + a0.x * da.y * b1.z + a0.x * a1.y * db1.z)+
+    vz100 * (+da.x * a0.y * b0.z - a1.x * da.y * b0.z + a1.x * a0.y * db0.z)+
+    vz101 * (+da.x * a0.y * b1.z - a1.x * da.y * b1.z + a1.x * a0.y * db1.z)+
+    vz110 * (+da.x * a1.y * b0.z + a1.x * da.y * b0.z + a1.x * a1.y * db0.z)+
+    vz111 * (+da.x * a1.y * b1.z + a1.x * da.y * b1.z + a1.x * a1.y * db1.z)
   );
 }
 vec3 transform(vec3 p) {
