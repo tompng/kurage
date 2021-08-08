@@ -49,43 +49,21 @@ vec3 tangentTransform(vec3 p, vec3 delta) {
   );
 }
 vec3 transform(vec3 p) {
-  vec3 a1 = p * p * (3.0 - 2.0 * p);
-  vec3 a0 = 1.0 - a1;
+  vec3 a = p * p * (3.0 - 2.0 * p);
   vec3 b0 = p * (1.0 - p) * (1.0 - p);
   vec3 b1 = p * p * (p - 1.0);
   return (
-    v000 * a0.x * a0.y * a0.z +
-    v001 * a0.x * a0.y * a1.z +
-    v010 * a0.x * a1.y * a0.z +
-    v011 * a0.x * a1.y * a1.z +
-    v100 * a1.x * a0.y * a0.z +
-    v101 * a1.x * a0.y * a1.z +
-    v110 * a1.x * a1.y * a0.z +
-    v111 * a1.x * a1.y * a1.z +
-    vx000 * b0.x * a0.y * a0.z +
-    vx001 * b0.x * a0.y * a1.z +
-    vx010 * b0.x * a1.y * a0.z +
-    vx011 * b0.x * a1.y * a1.z +
-    vx100 * b1.x * a0.y * a0.z +
-    vx101 * b1.x * a0.y * a1.z +
-    vx110 * b1.x * a1.y * a0.z +
-    vx111 * b1.x * a1.y * a1.z +
-    vy000 * a0.x * b0.y * a0.z +
-    vy001 * a0.x * b0.y * a1.z +
-    vy010 * a0.x * b1.y * a0.z +
-    vy011 * a0.x * b1.y * a1.z +
-    vy100 * a1.x * b0.y * a0.z +
-    vy101 * a1.x * b0.y * a1.z +
-    vy110 * a1.x * b1.y * a0.z +
-    vy111 * a1.x * b1.y * a1.z +
-    vz000 * a0.x * a0.y * b0.z +
-    vz001 * a0.x * a0.y * b1.z +
-    vz010 * a0.x * a1.y * b0.z +
-    vz011 * a0.x * a1.y * b1.z +
-    vz100 * a1.x * a0.y * b0.z +
-    vz101 * a1.x * a0.y * b1.z +
-    vz110 * a1.x * a1.y * b0.z +
-    vz111 * a1.x * a1.y * b1.z
+    mix(
+      mix(mix(v000, v001, a.z), mix(v010, v011, a.z), a.y),
+      mix(mix(v100, v101, a.z), mix(v110, v111, a.z), a.y),
+      a.x
+    ) +
+    b0.x * (mix(mix(vx000, vx010, a.y), mix(vx001, vx011, a.y), a.z)) +
+    b1.x * (mix(mix(vx100, vx110, a.y), mix(vx101, vx111, a.y), a.z)) +
+    b0.y * (mix(mix(vy000, vy001, a.z), mix(vy100, vy101, a.z), a.x)) +
+    b1.y * (mix(mix(vy010, vy011, a.z), mix(vy110, vy111, a.z), a.x)) +
+    b0.z * (mix(mix(vz000, vz100, a.x), mix(vz010, vz110, a.x), a.y)) +
+    b1.z * (mix(mix(vz001, vz101, a.x), mix(vz011, vz111, a.x), a.y))
   );
 }
 
@@ -94,11 +72,10 @@ varying vec3 vnormal;
 varying vec2 vtexcoord;
 
 void main() {
-  vec4 worldPosition = vec4(transform(position), 1);
+  vposition = transform(position);
   vec3 ta = tangentTransform(position, tan1);
   vec3 tb = tangentTransform(position, tan2);
-  gl_Position = projectionMatrix * (viewMatrix * worldPosition);
-  vposition = worldPosition.xyz;
+  gl_Position = projectionMatrix * (viewMatrix * vec4(vposition, 1));
   vnormal = normalize(cross(ta, tb));
   vtexcoord = uv.xy;
 }
