@@ -33,31 +33,50 @@ export function createJellyShader() {
   }) as Omit<THREE.ShaderMaterial, 'uniforms'> & { uniforms: JellyUniforms }
 }
 
-function splitPolygon(polygon: Point3D[][], cx: number, cy: number, c: number) {
-  if (polygon.every(p => p[0].x * cx + p[0].y * cy + c >= 0)) return polygon
+function gridSafe(p: Point3D) {
+  const ix = Math.round(p.x)
+  const iy = Math.round(p.y)
+  const iz = Math.round(p.z)
+  if (Math.abs(p.x - ix) < 1e-8) p.x = ix
+  if (Math.abs(p.y - iy) < 1e-8) p.y = iy
+  if (Math.abs(p.z - iz) < 1e-8) p.z = iz
+  return p
+}
+
+function splitPolygon(polygon: Point3D[][], cx: number, cy: number, cc: number) {
+  if (polygon.every(p => p[0].x * cx + p[0].y * cy + cc <= 0)) return []
+  if (polygon.every(p => p[0].x * cx + p[0].y * cy + cc >= 0)) return polygon
   const output = []
   for (let i = 0; i < polygon.length; i++) {
     const a = polygon[i]
     const b = polygon[(i + 1) % polygon.length]
-    const va = a[0].x * cx + a[0].y * cy + c
-    const vb = b[0].x * cx + b[0].y * cy + c
+    const va = a[0].x * cx + a[0].y * cy + cc
+    const vb = b[0].x * cx + b[0].y * cy + cc
     if (va < 0 && vb < 0) continue
     if (va >= 0 && vb >= 0) {
       output.push(a)
     } else {
       const c = a.map((ai, i) => {
         const bi = b[i]
-        return {
+        return gridSafe({
           x: (ai.x * vb - bi.x * va) / (vb - va),
           y: (ai.y * vb - bi.y * va) / (vb - va),
           z: (ai.z * vb - bi.z * va) / (vb - va)
-        }
+        })
       })
       if (va >= 0) output.push(a)
       output.push(c)
     }
   }
-  return output
+  const uniq: Point3D[][]=  []
+  output.forEach(a => {
+    const last = uniq[uniq.length - 1]
+    if (!last || a[0].x !== last[0].x || a[0].y !== last[0].y) uniq.push(a)
+  })
+  const first = uniq[0]
+  const last = uniq[uniq.length - 1]
+  if (first[0].x === last[0].x && first[0].y === last[0].y) uniq.pop()
+  return uniq
 }
 function polygonGridSplit(polygon: Point3D[][], x: number, y: number, size: number) {
   polygon = splitPolygon(polygon, 1, 0, -x)
@@ -152,7 +171,7 @@ export function createJellyGeometryGrids(segments: number): (THREE.BufferGeometr
       const cos = Math.cos(th)
       const sin = Math.sin(th)
       arc.push({
-        p: { x: r * cos, y: r * sin, z },
+        p: gridSafe({ x: r * cos, y: r * sin, z }),
         t1: { x: dr * cos, y: dr * sin, z: dz },
         t2: { x: sin, y: -cos, z: 0 },
         uv: { x: l * lscale * cos + 0.5, y: l * lscale * cos + 0.5, z: 0 }
@@ -182,7 +201,7 @@ export function createJellyGeometryGrids(segments: number): (THREE.BufferGeometr
       const cos = Math.cos(th)
       const sin = Math.sin(th)
       const p = {
-        p: { x: r * cos, y: r * sin, z },
+        p: gridSafe({ x: r * cos, y: r * sin, z }),
         t1: { x: dr * cos, y: dr * sin, z: dz },
         t2: { x: sin, y: -cos, z: 0 },
         uv: { x: l * lscale * cos + 0.5, y: l * lscale * cos + 0.5, z: 0 }
