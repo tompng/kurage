@@ -71,11 +71,11 @@ function splitPolygon(polygon: Point3D[][], cx: number, cy: number, cc: number) 
   const uniq: Point3D[][]=  []
   output.forEach(a => {
     const last = uniq[uniq.length - 1]
-    if (!last || a[0].x !== last[0].x || a[0].y !== last[0].y) uniq.push(a)
+    if (!last || Math.abs(a[0].x - last[0].x) > 1e-8 || Math.abs(a[0].y - last[0].y) > 1e-8) uniq.push(a)
   })
   const first = uniq[0]
   const last = uniq[uniq.length - 1]
-  if (first[0].x === last[0].x && first[0].y === last[0].y) uniq.pop()
+  if (Math.abs(first[0].x - last[0].x) < 1e-8 && Math.abs(first[0].y - last[0].y) < 1e-8)uniq.pop()
   return uniq
 }
 function polygonGridSplit(polygon: Point3D[][], x: number, y: number, size: number) {
