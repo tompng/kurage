@@ -2,6 +2,8 @@ import * as THREE from 'three'
 import dustVertexShader from './shaders/ocean_dust.vert'
 import dustFragmentShader from './shaders/ocean_dust.frag'
 
+import waveUrl from './images/wave.jpg'
+
 function createDustGeometry(count: number) {
   const positions: number[] = []
   // const phases: number[] = []
@@ -66,12 +68,12 @@ export class OceanDust {
 
 const waterVertexShader = `
 varying vec3 color;
-const vec3 decay = vec3(4.0, 3.0, 1.0);
+const vec3 decay = vec3(0.8, 0.6, 0.2);
 void main() {
   vec4 gpos = modelMatrix * vec4(position, 1);
   gl_Position = projectionMatrix * (viewMatrix * gpos);
   vec3 dir = normalize(gpos.xyz - cameraPosition);
-  color = exp(decay * cameraPosition.z) / (1.0 - dir.z) / decay * 0.5;
+  color = exp(decay * cameraPosition.z) / (1.0 - dir.z) / decay * 0.1;
 }
 `
 
@@ -100,6 +102,77 @@ export class OceanDark {
   render(renderer: THREE.WebGLRenderer, camera: THREE.Camera) {
     this.mesh.position.set(camera.position.x, camera.position.y + this.distance, camera.position.z)
     camera.position
+    renderer.render(this.scene, camera)
+  }
+}
+
+const surfaceVertexShader = `
+varying vec3 vPosition;
+void main() {
+  vec4 gpos = modelMatrix * vec4(position, 1);
+  vPosition = gpos.xyz;
+  gl_Position = projectionMatrix * (viewMatrix * gpos);
+}
+`
+
+const surfaceFragmentShader = `
+varying vec3 vPosition;
+uniform float time;
+uniform sampler2D wave;
+const vec3 decay = vec3(0.8, 0.6, 0.2);
+
+void main() {
+  vec3 view = vPosition - cameraPosition;
+  float distance = length(view);
+  vec3 dir = view / distance;
+  vec3 d = exp(-decay * distance);
+  vec3 water = exp(decay * cameraPosition.z) * (1.0 - d) / (1.0 - dir.z) / decay * 0.1;
+  vec2 pos2d = vPosition.xy;
+  vec3 norm = normalize(vec3(
+    (
+      + texture2D(wave, +pos2d * 0.197 + vec2(0.02, 0.03) * time).xy
+      - texture2D(wave, mat2(-0.241, 0.131, -0.131, -0.241) * pos2d + vec2(0.03, 0.02) * time).xy
+    ),
+    -2
+  ));
+
+
+  float c = max(-dot(dir, norm) - 0.0, 0.0) * 16.0 + 4.0;
+  gl_FragColor = vec4(water + d * c, 1);
+}
+`
+
+let waveTexture: THREE.Texture | null = null
+const loader = new THREE.TextureLoader()
+function getWaveTexture() {
+  if (waveTexture) return waveTexture
+  waveTexture = loader.load(waveUrl)
+  waveTexture.wrapS = THREE.RepeatWrapping,
+  waveTexture.wrapT = THREE.RepeatWrapping
+  return waveTexture
+}
+export class OceanSurface {
+  mesh: THREE.Mesh
+  material: THREE.ShaderMaterial
+  scene = new THREE.Scene()
+  uniforms = { time: { value: 0 }, wave: { value: getWaveTexture() } }
+  constructor() {
+    this.material = new THREE.ShaderMaterial({
+      uniforms: this.uniforms,
+      vertexShader: surfaceVertexShader,
+      fragmentShader: surfaceFragmentShader,
+      side: THREE.BackSide
+    })
+    const geometry = new THREE.PlaneBufferGeometry(1, 1)
+    this.mesh = new THREE.Mesh(geometry, this.material)
+    this.mesh.scale.set(64, 64, 1)
+    this.scene.add(this.mesh)
+  }
+  render(renderer: THREE.WebGLRenderer, camera: THREE.Camera) {
+    this.mesh.position.x = camera.position.x
+    this.mesh.position.y = camera.position.y
+    this.mesh.position.z = 2
+    this.uniforms.time.value = performance.now() / 1000
     renderer.render(this.scene, camera)
   }
 }

@@ -4,7 +4,7 @@ import * as THREE from 'three'
 import { Matrix3, Point3D, normalize, cross, dot, scale as vectorScale, add as vectorAdd, sub as vectorSub } from './math'
 import { BezierSegment, BezierStringRenderer } from './string_mesh'
 import { RibbonShape } from './ribbon_mesh'
-import { OceanDust, OceanDark } from './ocean'
+import { OceanDust, OceanDark, OceanSurface } from './ocean'
 
 function assignGlobal(data: Record<string, any>) {
   for (const i in data) (window as any)[i] = data[i]
@@ -23,6 +23,7 @@ document.body.onpointerdown = document.body.onpointermove = e => {
 const jelly = new JellyGrid(6)
 const oceanDust = new OceanDust(256)
 const oceanDark = new OceanDark()
+const oceanSurface = new OceanSurface()
 
 for (let i = 0; i < 4; i++) {
   const th = 2 * Math.PI * i / 4
@@ -219,6 +220,7 @@ function render() {
     )
   })
   oceanDark.render(renderer, camera)
+  oceanSurface.render(renderer, camera)
   stringRenderer.render(renderer, camera)
   const center = jelly.transformGridPoint({ x: 0, y: 0, z: 0 })
   jelly.strings[0]
