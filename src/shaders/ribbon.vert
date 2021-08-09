@@ -1,4 +1,4 @@
-precision mediump float;
+precision highp float;
 uniform vec3 v0, v1;
 uniform vec3 vx0, vy0, vz0;
 uniform vec3 vx1, vy1, vz1;

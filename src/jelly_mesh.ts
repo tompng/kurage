@@ -127,7 +127,7 @@ export function createJellyGeometryGrids(segments: number): (THREE.BufferGeometr
     }
   }
 
-  const N = 10
+  const N = 16
   const f = (th: number) => {
     const r = Math.sin(th)
     const z = Math.cos(th)
@@ -163,7 +163,7 @@ export function createJellyGeometryGrids(segments: number): (THREE.BufferGeometr
     const pf = fs[i - 1]
     const { r, z, dr, dz, l } = fs[i]
     const nf = fs[i + 1]
-    const len = Math.min(nf.l - l, l - pf.z)
+    const len = Math.min(nf.l - l, l - pf.l)
     const n = Math.max(Math.round(2 * Math.PI * r / len / 8), 1) * 8
     const arc: Point[] = []
     for (let j = 0; j < n; j++) {
