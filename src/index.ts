@@ -4,7 +4,7 @@ import * as THREE from 'three'
 import { Matrix3, Point3D, normalize, cross, dot, scale as vectorScale, add as vectorAdd, sub as vectorSub } from './math'
 import { BezierSegment, BezierStringRenderer } from './string_mesh'
 import { RibbonShape } from './ribbon_mesh'
-import { OceanDust } from './ocean'
+import { OceanDust, OceanDark } from './ocean'
 
 function assignGlobal(data: Record<string, any>) {
   for (const i in data) (window as any)[i] = data[i]
@@ -14,14 +14,15 @@ const renderer = new THREE.WebGLRenderer()
 const canvas = renderer.domElement
 document.body.appendChild(canvas)
 renderer.setSize(size, size)
-const mouse = { x: 0.5, y: 0.5 }
+const mouse = { x: -0.5, y: -0.5 }
 document.body.onpointerdown = document.body.onpointermove = e => {
   mouse.x = (e.pageX - canvas.offsetLeft) / canvas.width - 0.5
   mouse.y = 0.5 - (e.pageY - canvas.offsetTop) / canvas.height
 }
 
 const jelly = new JellyGrid(6)
-const ocean = new OceanDust(256)
+const oceanDust = new OceanDust(256)
+const oceanDark = new OceanDark()
 
 for (let i = 0; i < 4; i++) {
   const th = 2 * Math.PI * i / 4
@@ -97,7 +98,7 @@ targetRenderScene.add(targetRenderMesh)
 
 const scene = new THREE.Scene()
 jelly.addToScene(scene)
-const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 100)
+const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100)
 
 const stringRenderer = new BezierStringRenderer(8, 5)
 
@@ -173,7 +174,7 @@ function render() {
   renderer.clearDepth()
   centerPosition.update(jelly.position)
   camera.up.set(0, 0, 1)
-  camera.position.set(centerPosition.x, centerPosition.y - 4, centerPosition.z)
+  camera.position.set(centerPosition.x, centerPosition.y - 8, centerPosition.z)
   camera.lookAt(centerPosition.x, centerPosition.y, centerPosition.z)
 
   clovers.forEach(line => {
@@ -217,6 +218,7 @@ function render() {
       })
     )
   })
+  oceanDark.render(renderer, camera)
   stringRenderer.render(renderer, camera)
   const center = jelly.transformGridPoint({ x: 0, y: 0, z: 0 })
   jelly.strings[0]
@@ -225,7 +227,7 @@ function render() {
     r.update(jelly.strings[i].string, ribbonDir)
   })
   renderer.render(scene, camera)
-  ocean.render(renderer, camera)
+  oceanDust.render(renderer, camera)
 
   renderer.setRenderTarget(null)
   renderer.render(targetRenderScene, targetRenderCamera)
