@@ -166,7 +166,7 @@ class SmoothPoint3D {
 }
 
 
-const centerPosition = new SmoothPoint3D({ x: 0, y: 0, z: 0 }, 200)
+const centerPosition = new SmoothPoint3D(jelly.position, 200)
 
 function render() {
   renderer.setRenderTarget(target)

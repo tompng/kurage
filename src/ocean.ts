@@ -66,14 +66,17 @@ export class OceanDust {
   }
 }
 
+const WATER_DECAY = 'vec3(0.6, 0.5, 0.2)'
+const LIGHT0 = 0.1
+
 const waterVertexShader = `
 varying vec3 color;
-const vec3 decay = vec3(0.8, 0.6, 0.2);
+const vec3 decay = ${WATER_DECAY};
 void main() {
   vec4 gpos = modelMatrix * vec4(position, 1);
   gl_Position = projectionMatrix * (viewMatrix * gpos);
   vec3 dir = normalize(gpos.xyz - cameraPosition);
-  color = exp(decay * cameraPosition.z) / (1.0 - dir.z) / decay * 0.1;
+  color = ${LIGHT0} * exp(decay * cameraPosition.z) / (1.0 + dir.z) / decay;
 }
 `
 
@@ -119,14 +122,16 @@ const surfaceFragmentShader = `
 varying vec3 vPosition;
 uniform float time;
 uniform sampler2D wave;
-const vec3 decay = vec3(0.8, 0.6, 0.2);
+const vec3 decay = ${WATER_DECAY};
 
 void main() {
   vec3 view = vPosition - cameraPosition;
   float distance = length(view);
   vec3 dir = view / distance;
   vec3 d = exp(-decay * distance);
-  vec3 water = exp(decay * cameraPosition.z) * (1.0 - d) / (1.0 - dir.z) / decay * 0.1;
+  vec3 k = (1.0 + dir.z) * decay;
+  vec3 water = ${LIGHT0} * exp(decay * cameraPosition.z) * (1.0 - exp(-k * distance)) / k;
+
   vec2 pos2d = vPosition.xy;
   vec3 norm = normalize(vec3(
     (
@@ -135,10 +140,11 @@ void main() {
     ),
     -2
   ));
-
-
-  float c = max(-dot(dir, norm) - 0.0, 0.0) * 16.0 + 4.0;
-  gl_FragColor = vec4(water + d * c, 1);
+  float normdot = dot(dir, norm);
+  float reflectZ = dir.z - 2.0 * norm.z * normdot;
+  vec3 reflectColor = ${LIGHT0} / (1.0 + reflectZ) / decay;
+  vec3 surfaceColor = mix(vec3(1.0, 1.0, 2.0), reflectColor, max(1.0 + normdot, 0.0));
+  gl_FragColor = vec4(water + d * surfaceColor, 1);
 }
 `
 
@@ -171,7 +177,6 @@ export class OceanSurface {
   render(renderer: THREE.WebGLRenderer, camera: THREE.Camera) {
     this.mesh.position.x = camera.position.x
     this.mesh.position.y = camera.position.y
-    this.mesh.position.z = 2
     this.uniforms.time.value = performance.now() / 1000
     renderer.render(this.scene, camera)
   }

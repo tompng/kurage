@@ -29,7 +29,7 @@ type Cell = {
   geometry: THREE.BufferGeometry
 }
 export class JellyGrid {
-  position: Point3D = { x: 0, y: 0, z: 0 }
+  position: Point3D = { x: 0, y: 0, z: -2 }
   rotation = Matrix3.fromRotation({ x: 3, y: 2, z: 1 }, 1)
   velocity: Point3D = { x: 0, y: 0, z: 0 }
   momentum: Point3D = { x: 0, y: 0, z: 0 }
