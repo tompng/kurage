@@ -138,12 +138,14 @@ void main() {
       + texture2D(wave, +pos2d * 0.197 + vec2(0.02, 0.03) * time).xy
       - texture2D(wave, mat2(-0.241, 0.131, -0.131, -0.241) * pos2d + vec2(0.03, 0.02) * time).xy
     ),
-    -2
+    -4
   ));
   float normdot = dot(dir, norm);
   float reflectZ = dir.z - 2.0 * norm.z * normdot;
   vec3 reflectColor = ${LIGHT0} / (1.0 + reflectZ) / decay;
-  vec3 surfaceColor = mix(vec3(1.0, 1.0, 2.0), reflectColor, max(1.0 + normdot, 0.0));
+  float sky = max(dot(dir, vec3(8, 40, 20))-36.0, 0.0);
+  vec3 skyColor = vec3(2, 2, 4) + sky * sky;
+  vec3 surfaceColor = mix(skyColor, reflectColor, 1.0 + normdot);
   gl_FragColor = vec4(water + d * surfaceColor, 1);
 }
 `
