@@ -76,7 +76,7 @@ void main() {
   vec4 gpos = modelMatrix * vec4(position, 1);
   gl_Position = projectionMatrix * (viewMatrix * gpos);
   vec3 dir = normalize(gpos.xyz - cameraPosition);
-  color = ${LIGHT0} * exp(decay * cameraPosition.z) / (1.0 + dir.z) / decay;
+  color = ${LIGHT0} * exp(decay * cameraPosition.z) / (1.0 - dir.z) / decay;
 }
 `
 
@@ -129,7 +129,7 @@ void main() {
   float distance = length(view);
   vec3 dir = view / distance;
   vec3 d = exp(-decay * distance);
-  vec3 k = (1.0 + dir.z) * decay;
+  vec3 k = (1.0 - dir.z) * decay;
   vec3 water = ${LIGHT0} * exp(decay * cameraPosition.z) * (1.0 - exp(-k * distance)) / k;
 
   vec2 pos2d = vPosition.xy;
@@ -142,8 +142,8 @@ void main() {
   ));
   float normdot = dot(dir, norm);
   float reflectZ = dir.z - 2.0 * norm.z * normdot;
-  vec3 reflectColor = ${LIGHT0} / (1.0 + reflectZ) / decay;
-  float sky = max(dot(dir, vec3(8, 40, 20))-36.0, 0.0);
+  vec3 reflectColor = ${LIGHT0} / (1.0 - reflectZ) / decay;
+  float sky = max(dot(dir, vec3(8, 40, 20)) - 36.0, 0.0);
   vec3 skyColor = vec3(2, 2, 4) + sky * sky;
   vec3 surfaceColor = mix(skyColor, reflectColor, 1.0 + normdot);
   gl_FragColor = vec4(water + d * surfaceColor, 1);
