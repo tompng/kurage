@@ -9,15 +9,42 @@ import { OceanDust, OceanDark, OceanSurface } from './ocean'
 function assignGlobal(data: Record<string, any>) {
   for (const i in data) (window as any)[i] = data[i]
 }
-const size = 800
 const renderer = new THREE.WebGLRenderer()
+const target = new THREE.WebGLRenderTarget(16, 16, {
+  minFilter: THREE.NearestFilter,
+  magFilter: THREE.NearestFilter,
+  type: THREE.HalfFloatType
+})
+let camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.1, 100)
 const canvas = renderer.domElement
 document.body.appendChild(canvas)
-renderer.setSize(size, size)
+function setSize(){
+  const ratio = 0.75
+  let width: number, height: number, fov: number
+  if (innerWidth > innerHeight) {
+    fov = 180 * Math.atan(ratio) / Math.PI
+    width = (innerWidth * ratio < innerHeight) ? innerWidth : innerHeight / ratio
+    height = width * ratio
+  } else {
+    fov = 45
+    height = (innerHeight * ratio < innerWidth) ? innerHeight : innerWidth / ratio
+    width = height * ratio
+  }
+  renderer.setPixelRatio(devicePixelRatio)
+  renderer.setSize(width, height)
+  target.setSize(width * devicePixelRatio, height * devicePixelRatio)
+  camera = new THREE.PerspectiveCamera(fov, width / height, 0.1, 100)
+  const dom = renderer.domElement
+  dom.style.left = `${(innerWidth - width) / 2}px`
+  dom.style.top = `${(innerHeight - height) / 2}px`
+}
+setSize()
+window.onresize = setSize
 const mouse = { x: -0.5, y: 0 }
 document.body.onpointerdown = document.body.onpointermove = e => {
-  mouse.x = (e.pageX - canvas.offsetLeft) / canvas.width - 0.5
-  mouse.y = 0.5 - (e.pageY - canvas.offsetTop) / canvas.height
+  const size = Math.min(innerWidth, innerHeight)
+  mouse.x = (2 * e.pageX - innerWidth) / size
+  mouse.y = (innerHeight - 2 * e.pageY) / size
 }
 
 const jelly = new JellyGrid(6)
@@ -102,12 +129,6 @@ requestAnimationFrame(frame)
 
 assignGlobal({ jelly, mouse, renderer })
 
-
-const target = new THREE.WebGLRenderTarget(size, size, {
-  minFilter: THREE.NearestFilter,
-  magFilter: THREE.NearestFilter,
-  type: THREE.HalfFloatType
-})
 const targetRenderMesh = new THREE.Mesh(new THREE.PlaneBufferGeometry(), new THREE.MeshBasicMaterial({ map: target.texture }))
 const targetRenderScene = new THREE.Scene()
 const targetRenderCamera = new THREE.Camera()
@@ -116,7 +137,6 @@ targetRenderScene.add(targetRenderMesh)
 
 const scene = new THREE.Scene()
 jelly.addToScene(scene)
-const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100)
 
 const stringRenderer = new BezierStringRenderer(8, 5)
 
