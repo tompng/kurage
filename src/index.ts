@@ -16,8 +16,10 @@ const target = new THREE.WebGLRenderTarget(16, 16, {
   type: THREE.HalfFloatType
 })
 let camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.1, 100)
-const canvas = renderer.domElement
-document.body.appendChild(canvas)
+const uiCanvas = document.createElement('canvas')
+const uiCtx = uiCanvas.getContext('2d')!
+document.body.appendChild(renderer.domElement)
+document.body.appendChild(uiCanvas)
 function setSize(){
   const minAspect = 3 / 5
   const maxAspect = 3 / 4
@@ -37,16 +39,67 @@ function setSize(){
   target.setSize(width * devicePixelRatio, height * devicePixelRatio)
   camera = new THREE.PerspectiveCamera(fov, width / height, 0.1, 100)
   const dom = renderer.domElement
-  dom.style.left = `${(innerWidth - width) / 2}px`
-  dom.style.top = `${(innerHeight - height) / 2}px`
+  uiCanvas.width = width * devicePixelRatio
+  uiCanvas.height = height * devicePixelRatio
+  uiCanvas.style.width = `${width}px`
+  uiCanvas.style.height = `${height}px`
+  renderer.domElement.style.left = uiCanvas.style.left = `${(innerWidth - width) / 2}px`
+  renderer.domElement.style.top = uiCanvas.style.top = `${(innerHeight - height) / 2}px`
 }
 setSize()
 window.onresize = setSize
-const mouse = { x: -0.5, y: 0 }
-document.body.onpointerdown = document.body.onpointermove = e => {
+const touch = {
+  id: null as null | number,
+  lastActiveTime: 1 as null | number,
+  start: { x: 0, y: 0 },
+  end: { x: 0, y: 0 },
+  th: 0
+}
+assignGlobal({ touch })
+const player = {
+  x: 0, z: -2,
+  vx: 0, vz: 0,
+  th: Math.PI,
+  dstTheta: Math.PI
+}
+function getTouchPoint(e: PointerEvent) {
   const size = Math.min(innerWidth, innerHeight)
-  mouse.x = (2 * e.pageX - innerWidth) / size
-  mouse.y = (innerHeight - 2 * e.pageY) / size
+  return {
+    x: (2 * e.pageX - innerWidth) / size,
+    y: (innerHeight - 2 * e.pageY) / size
+  }
+}
+
+document.addEventListener('touchstart', e => {
+  e.preventDefault()
+}, { passive: false })
+window.onpointerdown = e => {
+  e.preventDefault()
+  const p = getTouchPoint(e)
+  if (Math.hypot(p.x, p.y) < 1 / 3) {
+    touch.id = e.pointerId
+    touch.start = p
+    touch.end = p
+    touch.lastActiveTime = null
+  }
+}
+window.onpointermove = e => {
+  e.preventDefault()
+  if (!touch || touch.id !== e.pointerId) return
+  touch.end = getTouchPoint(e)
+  const dx = touch.end.x - touch.start.x
+  const dy = touch.end.y - touch.start.y
+  const dr = Math.hypot(dx, dy)
+  player.dstTheta = touch.th = Math.atan2(
+    64 * dr * dy + Math.sin(player.th),
+    64 * dr * dx + Math.cos(player.th)
+  )
+  touch.lastActiveTime = null
+}
+window.onpointerup = e => {
+  e.preventDefault()
+  if (touch.id === e.pointerId) touch.lastActiveTime = new Date().getTime()
+  touch.id = null
 }
 
 const jelly = new JellyGrid(6)
@@ -86,22 +139,16 @@ for (let i = 0; i < 64; i++) {
   )
 }
 
-const player = {
-  x: 0, z: -2,
-  vx: 0, vz: 0,
-  th: 3
-}
 assignGlobal({ player })
 function frame() {
   const currentDir = normalize(vectorSub(jelly.transformLocalPoint({ x: 0, y: 0, z: -1 }), jelly.position))
   const targetDir = normalize({ x: Math.cos(player.th), y: 0, z: Math.sin(player.th) })
   const rot = normalize(cross(currentDir, targetDir))
-  const th = Math.atan2(mouse.y, mouse.x)
-  const d = Math.sqrt(1 - Math.cos(th - player.th)) * (Math.sin(th - player.th) > 0 ? 1 : -1)
-  player.vx = player.vx * 0.4 + (currentDir.x + Math.cos(th)) * 0.01
-  player.vz = player.vz * 0.4 + (currentDir.z + Math.sin(th)) * 0.01
+  const d = Math.sqrt(1 - Math.cos(player.dstTheta - player.th)) * (Math.sin(player.dstTheta - player.th) > 0 ? 1 : -1)
+  player.vx = player.vx * 0.4 + (currentDir.x + Math.cos(player.dstTheta)) * 0.01
+  player.vz = player.vz * 0.4 + (currentDir.z + Math.sin(player.dstTheta)) * 0.01
   const vdot = Math.cos(player.th) * player.vx + Math.sin(player.th) * player.vz
-  player.th += d * (0.002*0 + Math.min(Math.max(0, vdot * 2), 1))
+  player.th += d * (0.002 + Math.min(Math.max(0, vdot), 0.006))
   player.x += player.vx * 0.1
   player.z += player.vz * 0.1
   player.z = Math.min(player.z, -1)
@@ -110,7 +157,7 @@ function frame() {
   jelly.velocity.y = 0
   jelly.velocity.z = player.vz
   if (!isNaN(rot.x)) {
-    let theta = Math.atan(Math.acos(dot(currentDir, targetDir))) * 0.1
+    let theta = Math.atan(Math.acos(dot(currentDir, targetDir))) * 0.5
     const dt = 0.02
     jelly.velocity.x += currentDir.x * dt
     jelly.velocity.y += currentDir.y * dt
@@ -129,7 +176,7 @@ function frame() {
 }
 requestAnimationFrame(frame)
 
-assignGlobal({ jelly, mouse, renderer })
+assignGlobal({ jelly, renderer })
 
 const targetRenderMesh = new THREE.Mesh(new THREE.PlaneBufferGeometry(), new THREE.MeshBasicMaterial({ map: target.texture }))
 const targetRenderScene = new THREE.Scene()
@@ -258,6 +305,51 @@ function render() {
       })
     )
   })
+
+  const uiBrightness = touch.lastActiveTime ? 1 - (new Date().getTime() - touch.lastActiveTime) / 300 : 1
+  uiCtx.clearRect(0, 0, uiCanvas.width, uiCanvas.height)
+  uiCtx.save()
+  uiCtx.translate(uiCanvas.width / 2, uiCanvas.height / 2)
+  const minWH = Math.min(uiCanvas.width, uiCanvas.height)
+  uiCtx.scale(minWH / 2, -minWH / 2)
+  uiCtx.rotate(touch.th)
+  uiCtx.lineCap = uiCtx.lineJoin = 'round'
+  uiCtx.strokeStyle = '#eef'
+  if (uiBrightness > 0) {
+    uiCtx.lineWidth = 0.05
+    uiCtx.beginPath()
+    uiCtx.globalAlpha = uiBrightness * 0.5
+    uiCtx.moveTo(0.2, 0)
+    uiCtx.lineTo(0.6, 0)
+    uiCtx.moveTo(0.6, 0.09)
+    uiCtx.bezierCurveTo(
+      0.7, 0.08,
+      0.7, -0.08,
+      0.6, -0.09
+    )
+    uiCtx.stroke()
+  }
+  uiCtx.globalAlpha = 0.4
+  const currentDir = normalize(vectorSub(jelly.transformLocalPoint({ x: 0, y: 0, z: -1 }), jelly.position))
+  const currentTh = Math.atan2(currentDir.z, currentDir.x)
+  const alpha = Math.min(0.2, 10 * Math.max(0.9 - Math.cos(currentTh - player.dstTheta), 0))
+  if (alpha > 0) {
+    uiCtx.globalAlpha = alpha * (1 + Math.sin(performance.now() / 300)) / 2
+    uiCtx.beginPath()
+    uiCtx.lineWidth = 0.02
+    uiCtx.rotate(currentTh - player.dstTheta)
+    if (Math.sin(player.th - player.dstTheta) < 0) uiCtx.scale(1, -1)
+    for (let i = 0; i < 2; i++) {
+      uiCtx.rotate(Math.PI)
+      uiCtx.moveTo(0.06, 0.5)
+      uiCtx.bezierCurveTo(0.04, 0.505, -0.04, 0.505, -0.06, 0.5)
+      uiCtx.moveTo(0.072, 0.53)
+      uiCtx.bezierCurveTo(0.111, 0.52, 0.109, 0.48, 0.068, 0.47)
+    }
+    uiCtx.stroke()
+  }
+  uiCtx.restore()
+
   oceanDark.render(renderer, camera)
   oceanSurface.render(renderer, camera)
   stringRenderer.render(renderer, camera)

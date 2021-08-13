@@ -331,9 +331,9 @@ export class JellyGrid {
         for (let iy = 0; iy <= segments; iy++) {
           const { p, v, f, dst } = coords[iz][ix][iy]
           const f2 = {
-            x: 8 * (dst.x - p.x) - 2 * v.x,
-            y: 8 * (dst.y - p.y) - 2 * v.y,
-            z: 8 * (dst.z - p.z) - 2 * v.z
+            x: 16 * (dst.x - p.x) - 2 * v.x,
+            y: 16 * (dst.y - p.y) - 2 * v.y,
+            z: 16 * (dst.z - p.z) - 2 * v.z
           }
           v.x += (f.x + f2.x) * dt
           v.y += (f.y + f2.y) * dt
