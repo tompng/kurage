@@ -14,7 +14,7 @@ const renderer = new THREE.WebGLRenderer()
 const canvas = renderer.domElement
 document.body.appendChild(canvas)
 renderer.setSize(size, size)
-const mouse = { x: -0.5, y: -0.5 }
+const mouse = { x: -0.5, y: 0 }
 document.body.onpointerdown = document.body.onpointermove = e => {
   mouse.x = (e.pageX - canvas.offsetLeft) / canvas.width - 0.5
   mouse.y = 0.5 - (e.pageY - canvas.offsetTop) / canvas.height
@@ -57,15 +57,29 @@ for (let i = 0; i < 64; i++) {
   )
 }
 
+const player = {
+  x: 0, z: -2,
+  vx: 0, vz: 0,
+  th: 3
+}
+assignGlobal({ player })
 function frame() {
   const currentDir = normalize(vectorSub(jelly.transformLocalPoint({ x: 0, y: 0, z: -1 }), jelly.position))
-  assignGlobal({ currentDir })
-  const targetDir = normalize({ x: mouse.x, y: 0, z: mouse.y })
+  const targetDir = normalize({ x: Math.cos(player.th), y: 0, z: Math.sin(player.th) })
   const rot = normalize(cross(currentDir, targetDir))
-  const vdot = dot(currentDir, jelly.velocity)
-  jelly.velocity.x = jelly.velocity.x * 0.5 + 0.5 * vdot * currentDir.x
-  jelly.velocity.y = jelly.velocity.y * 0.5 + 0.5 * vdot * currentDir.y
-  jelly.velocity.z = jelly.velocity.z * 0.5 + 0.5 * vdot * currentDir.z
+  const th = Math.atan2(mouse.y, mouse.x)
+  const d = Math.sqrt(1 - Math.cos(th - player.th)) * (Math.sin(th - player.th) > 0 ? 1 : -1)
+  player.vx = player.vx * 0.4 + (currentDir.x + Math.cos(th)) * 0.01
+  player.vz = player.vz * 0.4 + (currentDir.z + Math.sin(th)) * 0.01
+  const vdot = Math.cos(player.th) * player.vx + Math.sin(player.th) * player.vz
+  player.th += d * (0.002*0 + Math.min(Math.max(0, vdot * 2), 1))
+  player.x += player.vx * 0.1
+  player.z += player.vz * 0.1
+  player.z = Math.min(player.z, -1)
+
+  jelly.velocity.x = player.vx
+  jelly.velocity.y = 0
+  jelly.velocity.z = player.vz
   if (!isNaN(rot.x)) {
     let theta = Math.atan(Math.acos(dot(currentDir, targetDir))) * 0.1
     const dt = 0.02
@@ -78,6 +92,9 @@ function frame() {
     jelly.momentum.z = jelly.momentum.z * 0.9 + rot.z * theta
   }
   jelly.update(performance.now() / 1000)
+  jelly.position.x = player.x
+  jelly.position.y = 0
+  jelly.position.z = player.z
   render()
   requestAnimationFrame(frame)
 }
@@ -166,7 +183,7 @@ class SmoothPoint3D {
 }
 
 
-const centerPosition = new SmoothPoint3D(jelly.position, 200)
+const centerPosition = new SmoothPoint3D(jelly.position, 60)
 
 function render() {
   renderer.setRenderTarget(target)
