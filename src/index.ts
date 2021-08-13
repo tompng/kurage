@@ -19,16 +19,18 @@ let camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.1, 100)
 const canvas = renderer.domElement
 document.body.appendChild(canvas)
 function setSize(){
-  const ratio = 0.75
+  const minAspect = 3 / 5
+  const maxAspect = 3 / 4
+  const aspect = Math.max(minAspect, Math.min(innerWidth / innerHeight, innerHeight / innerWidth, maxAspect))
   let width: number, height: number, fov: number
   if (innerWidth > innerHeight) {
-    fov = 180 * Math.atan(ratio) / Math.PI
-    width = (innerWidth * ratio < innerHeight) ? innerWidth : innerHeight / ratio
-    height = width * ratio
+    fov = 180 * Math.atan(aspect) / Math.PI
+    width = (innerWidth * aspect < innerHeight) ? innerWidth : innerHeight / aspect
+    height = width * aspect
   } else {
     fov = 45
-    height = (innerHeight * ratio < innerWidth) ? innerHeight : innerWidth / ratio
-    width = height * ratio
+    height = (innerHeight * aspect < innerWidth) ? innerHeight : innerWidth / aspect
+    width = height * aspect
   }
   renderer.setPixelRatio(devicePixelRatio)
   renderer.setSize(width, height)
