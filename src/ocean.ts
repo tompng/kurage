@@ -183,3 +183,61 @@ export class OceanSurface {
     renderer.render(this.scene, camera)
   }
 }
+
+
+const terrainVertexShader = `
+varying vec3 vPosition;
+void main() {
+  vPosition = (modelMatrix * vec4(position, 1)).xyz;
+  float x = vPosition.x;
+  vPosition.z += sin(vPosition.y) * dot(sin(vec3(0.14, 0.35, 0.51) * x), vec3(0.1));
+  gl_Position = projectionMatrix * (viewMatrix * vec4(vPosition, 1));
+}
+`
+
+const terrainFragmentShader = `
+uniform sampler2D wave;
+varying vec3 vPosition;
+uniform float time;
+
+const vec3 decay = ${WATER_DECAY};
+void main() {
+  vec3 view = vPosition - cameraPosition;
+  float distance = length(view);
+  vec3 dir = view / distance;
+  vec3 d = exp(-decay * distance / 4.0);
+  vec3 k = (1.0 - dir.z) * decay;
+  vec3 zdecay = exp(decay * cameraPosition.z);
+  vec3 water = ${LIGHT0} * zdecay * (1.0 - exp(-k * distance)) / k;
+  vec3 floorColor = dot(texture2D(wave, vPosition.xy / 2.0), vec4(0.3,0.3,0.3,0)) * vec3(1, 1, 1);
+  float dist = length(vPosition - vec3(cameraPosition.x, 0, cameraPosition.z));
+  vec3 c = floorColor * exp(-0.6 * dist) * 2.0;
+  gl_FragColor = vec4(water + c * d, 1);
+}
+`
+export class OceanTerrain {
+  mesh: THREE.Mesh
+  material: THREE.ShaderMaterial
+  scene = new THREE.Scene()
+  uniforms = { time: { value: 0 }, wave: { value: getWaveTexture() } }
+  constructor() {
+    this.material = new THREE.ShaderMaterial({
+      uniforms: this.uniforms,
+      vertexShader: terrainVertexShader,
+      fragmentShader: terrainFragmentShader,
+      side: THREE.FrontSide
+    })
+    const geometry = new THREE.PlaneBufferGeometry(1, 1, 12, 12)
+    this.mesh = new THREE.Mesh(geometry, this.material)
+    this.mesh.frustumCulled = false
+    this.mesh.scale.set(12, 12, 1)
+    this.scene.add(this.mesh)
+  }
+  render(renderer: THREE.WebGLRenderer, camera: THREE.Camera) {
+    this.mesh.position.x = Math.round(camera.position.x)
+    this.mesh.position.y = Math.round(camera.position.y) + 6
+    this.mesh.position.z = -16
+    this.uniforms.time.value = performance.now() / 1000
+    renderer.render(this.scene, camera)
+  }
+}

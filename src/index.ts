@@ -4,7 +4,7 @@ import * as THREE from 'three'
 import { Matrix3, Point3D, normalize, cross, dot, scale as vectorScale, add as vectorAdd, sub as vectorSub } from './math'
 import { BezierSegment, BezierStringRenderer } from './string_mesh'
 import { RibbonShape } from './ribbon_mesh'
-import { OceanDust, OceanDark, OceanSurface } from './ocean'
+import { OceanDust, OceanDark, OceanSurface, OceanTerrain } from './ocean'
 
 function assignGlobal(data: Record<string, any>) {
   for (const i in data) (window as any)[i] = data[i]
@@ -106,6 +106,7 @@ const jelly = new JellyGrid(6)
 const oceanDust = new OceanDust(256)
 const oceanDark = new OceanDark()
 const oceanSurface = new OceanSurface()
+const oceanTerrain = new OceanTerrain()
 
 for (let i = 0; i < 4; i++) {
   const th = 2 * Math.PI * i / 4
@@ -140,6 +141,7 @@ for (let i = 0; i < 64; i++) {
 }
 
 assignGlobal({ player })
+const oceanDepth = -16
 function frame() {
   const currentDir = normalize(vectorSub(jelly.transformLocalPoint({ x: 0, y: 0, z: -1 }), jelly.position))
   const targetDir = normalize({ x: Math.cos(player.th), y: 0, z: Math.sin(player.th) })
@@ -151,7 +153,7 @@ function frame() {
   player.th += d * (0.002 + Math.min(Math.max(0, vdot), 0.006))
   player.x += player.vx * 0.1
   player.z += player.vz * 0.1
-  player.z = Math.min(player.z, -1)
+  player.z = Math.min(Math.max(player.z, oceanDepth + 1), -1)
 
   jelly.velocity.x = player.vx
   jelly.velocity.y = 0
@@ -187,7 +189,7 @@ targetRenderScene.add(targetRenderMesh)
 const scene = new THREE.Scene()
 jelly.addToScene(scene)
 
-const stringRenderer = new BezierStringRenderer(8, 5)
+const stringRenderer = new BezierStringRenderer(4, 5)
 
 const clovers = [0, 1, 2, 3].map(i => {
   const th = Math.PI * i / 2
@@ -352,6 +354,7 @@ function render() {
 
   oceanDark.render(renderer, camera)
   oceanSurface.render(renderer, camera)
+  oceanTerrain.render(renderer, camera)
   stringRenderer.render(renderer, camera)
   const center = jelly.transformGridPoint({ x: 0, y: 0, z: 0 })
   jelly.strings[0]
