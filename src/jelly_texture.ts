@@ -6,11 +6,14 @@ function createCanvas(size: number) {
   ctx.scale(size / 2, size / 2)
   ctx.fillStyle = 'black'
   ctx.fillRect(-1, -1, 2, 2)
+    ctx.lineJoin = ctx.lineCap = 'round'
   return [canvas, ctx] as const
 }
 
-function stripeImage(size: number) {
+export function stripeImage(size: number) {
   const [canvas, ctx] = createCanvas(size)
+  ctx.fillStyle = '#666'
+  ctx.fillRect(-1, -1, 2, 2)
   ctx.beginPath()
   for (let i = 0; i < 20; i++) {
     ctx.save()
@@ -27,23 +30,21 @@ function stripeImage(size: number) {
   }
   ctx.lineWidth = 0.1
   ctx.globalAlpha = 0.8
-  ctx.strokeStyle = '#f00'
+  ctx.strokeStyle = '#f66'
   ctx.filter = `blur(${size / 40}px)`;
   ctx.stroke()
   ctx.lineWidth = 0.05
   ctx.globalAlpha = 0.5
-  ctx.strokeStyle = '#fa4'
+  ctx.strokeStyle = '#fa6'
   ctx.filter = `blur(${size / 80}px)`;
   ctx.stroke()
-  ctx.filter = 'none'
-  ctx.fillStyle = 'white'
-  ctx.globalAlpha = 0.25
-  ctx.fillRect(-1, -1, 2, 2)
   return canvas
 }
 
-function radialImage(size: number) {
+export function radialImage(size: number) {
   const [canvas, ctx] = createCanvas(size)
+  ctx.fillStyle = '#444'
+  ctx.fillRect(-1, -1, 2, 2)
   ctx.beginPath()
   const lines: number[][] = []
   const N = 64
@@ -81,7 +82,6 @@ function radialImage(size: number) {
     if (lines.length === 2) {
       lines.forEach(line => render([line], splitAt))
     } else {
-      // const n = Math.round(lines.length * (1 + Math.random()) / 3)
       render(lines.slice(0, n), splitAt)
       render(lines.slice(n), splitAt)
     }
@@ -91,18 +91,65 @@ function radialImage(size: number) {
     render(lines.slice(M * i / K, M * (i + 1) / K), 0)
   }
   ctx.strokeStyle = 'white'
+  ctx.globalAlpha = 0.1
   ctx.lineWidth = 0.02
-  ctx.lineJoin = ctx.lineCap = 'round'
+  ctx.filter = `blur(${size / 128}px)`;
   ctx.stroke()
+  ctx.filter = `blur(${size / 32}px)`;
+  ctx.beginPath()
+  ctx.globalAlpha = 1
+  ctx.arc(0, 0, 0.3, 0, 2 * Math.PI)
+  ctx.fill()
 
   return canvas
 }
 
 export function test() {
-  [stripeImage(512), radialImage(512)].forEach(canvas => {
+  const c1 = stripeImage(512)
+  const c2 = radialImage(512)
+  ;[c1, c2, mergeImage(512, c1, c2)].forEach(canvas => {
     canvas.style.boxShadow = '0 0 2px white'
     canvas.style.position = 'relative'
     canvas.style.width = canvas.style.height = '512px'
     document.body.appendChild(canvas)
   })
+}
+
+export function mergeImage(size: number, front: HTMLCanvasElement, back: HTMLCanvasElement, ratio = 0.6, mix = 0.02) {
+  const [canvas, ctx] = createCanvas(size)
+  const imgdata = ctx.createImageData(size, size)
+  const data = imgdata.data
+  const fsize = front.width
+  const bsize = back.width
+  const fdata = front.getContext('2d')!.getImageData(0, 0, fsize, fsize).data
+  const bdata = back.getContext('2d')!.getImageData(0, 0, bsize, bsize).data
+  for (let x = 0; x < size; x++) {
+    for (let y = 0; y < size; y++) {
+      const idx = 4 * (y * size + x)
+      const cx = x - size / 2
+      const cy = y - size / 2
+      const dr = Math.hypot(cx, cy)
+      const dx = cx / dr
+      const dy = cy / dr
+      const r = dr * 2 / size
+      const frontR = r / (ratio + mix)
+      const backR = Math.max((1 - r) / (1 - ratio + mix), 0)
+      const t = (r - ratio + mix) / mix / 2
+      if (t >= 1) {
+        const bidx = 4 * (Math.floor(bsize * (1 + dy * backR) / 2) * bsize + Math.floor(bsize * (1 + dx * backR) / 2))
+        for (let j = 0; j < 4; j++) data[idx + j] = bdata[bidx + j]
+      } else if (t <= 0) {
+        const fidx = 4 * (Math.floor(fsize * (1 + dy * frontR) / 2) * fsize + Math.floor(bsize * (1 + dx * frontR) / 2))
+        for (let j = 0; j < 4; j++) data[idx + j] = fdata[fidx + j]
+      } else {
+        const bidx = 4 * (Math.floor(bsize * (1 + dy * backR) / 2) * bsize + Math.floor(bsize * (1 + dx * backR) / 2))
+        const fidx = 4 * (Math.floor(fsize * (1 + dy * frontR) / 2) * fsize + Math.floor(bsize * (1 + dx * frontR) / 2))
+        const bw = (3 - 2 * t) * t * t
+        const fw = 1 - bw
+        for (let j = 0; j < 4; j++) data[idx + j] = fdata[fidx + j] * fw + bw * bdata[bidx + j]
+      }
+    }
+  }
+  ctx.putImageData(imgdata, 0, 0)
+  return canvas
 }
