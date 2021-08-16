@@ -1,5 +1,9 @@
 uniform float radius;
 varying float vTParameter, vBrightness;
+#ifdef VARYING_COLOR
+  varying vec3 vColor, vDColor;
+#endif
+
 void main() {
   float t = position.z;
   float u = 1.0 - t;
@@ -16,4 +20,8 @@ void main() {
   float dist = -(viewMatrix * vec4((instanceMatrix * vec4(0.125, 0.375, 0.375, 0.125)).xyz, 1)).z;
   vBrightness = pow(0.8, dist);
   vTParameter = t;
+#ifdef VARYING_COLOR
+  vColor = instanceColor;
+  vDColor = vec3(instanceMatrix[0][3], instanceMatrix[1][3], instanceMatrix[2][3]) - instanceColor;
+#endif
 }
