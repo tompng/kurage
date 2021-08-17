@@ -13,6 +13,8 @@ const textureCanvas = mergeImage(
   radialTreeImage(512)
 )
 const texture = new THREE.Texture(textureCanvas)
+texture.wrapS = THREE.ClampToEdgeWrapping
+texture.wrapT = THREE.ClampToEdgeWrapping
 texture.needsUpdate = true
 
 function assignGlobal(data: Record<string, any>) {

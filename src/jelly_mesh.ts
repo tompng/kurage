@@ -207,7 +207,7 @@ export function createJellyGeometryGrids(segments: number): (THREE.BufferGeometr
         p: gridSafe({ x: r * cos, y: r * sin, z }),
         t1: { x: dr * cos, y: dr * sin, z: dz },
         t2: { x: sin, y: -cos, z: 0 },
-        uv: { x: (l / lmax * cos + 1) / 2, y: (l / lmax * sin + 1) / 2, z: 0 }
+        uv: { x: ((1 - l / lmax) * cos + 1) / 2, y: ((1 - l / lmax) * sin + 1) / 2, z: 0 }
       }
       const j = (i + 1) % arc.length
       add(arc === firstArc ? [p, arc[i], arc[j]] : [arc[i], p, arc[j]])
