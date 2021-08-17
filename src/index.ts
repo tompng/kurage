@@ -5,6 +5,7 @@ import { Matrix3, Point3D, normalize, cross, dot, scale as vectorScale, add as v
 import { BezierSegment, BezierStringRenderer } from './string_mesh'
 import { RibbonShape } from './ribbon_mesh'
 import { OceanDust, OceanDark, OceanSurface, OceanTerrain } from './ocean'
+import { test } from './jelly_texture';test();throw 'err'
 
 function assignGlobal(data: Record<string, any>) {
   for (const i in data) (window as any)[i] = data[i]

@@ -76,6 +76,17 @@ export function stripeImage(size: number) {
   ctx.stroke()
   return canvas
 }
+export function outerStripeImage(size: number) {
+  const canvas = stripeImage(size)
+  const ctx = canvas.getContext('2d')!
+  ctx.beginPath()
+  ctx.arc(0, 0, 0.8, 0, 2 * Math.PI)
+  ctx.globalAlpha = 1
+  ctx.filter = `blur(${size / 32}px)`;
+  ctx.fillStyle = '#666'
+  ctx.fill()
+  return canvas
+}
 function circleRand(r = 1) {
   while (true) {
     const x = 2 * Math.random() - 1
@@ -192,11 +203,85 @@ export function radialTreeImage(size: number) {
   return canvas
 }
 
+function radialPath(ctx: CanvasRenderingContext2D, n: number, rmin: number, rmax: number, noise: number) {
+  for (let i = 0; i < n; i++) {
+    ctx.save()
+    ctx.rotate(2 * Math.PI * i / n)
+    const M = 32
+    const r = rmin + (rmax - rmin) * Math.random()
+    ctx.moveTo(r, 0)
+    for (let j = 1; j < M; j++) {
+      const t = r + (1 - r) * j / M
+      ctx.lineTo(t, noise * t * (2 * Math.random() - 1))
+    }
+    ctx.restore()
+  }
+}
+
+export function radialImage(size: number) {
+  const [canvas, ctx] = createCanvas(size)
+  ctx.fillStyle = '#444'
+  ctx.fillRect(-1, -1, 2, 2)
+  ctx.beginPath()
+  radialPath(ctx, 48, 0, 0, 0.02)
+  ctx.strokeStyle = 'white'
+  ctx.globalAlpha = 0.1
+  ctx.lineWidth = 0.02
+  ctx.filter = `blur(${size / 128}px)`;
+  ctx.stroke()
+  ctx.beginPath()
+  ctx.globalAlpha = 1
+  ctx.arc(0, 0, 0.5, 0, 2 * Math.PI)
+  ctx.filter = `blur(${size / 32}px)`;
+  ctx.fill()
+  return canvas
+}
+
+export function radialOwanImage(size: number) {
+  const canvas = radialImage(size)
+  const ctx = canvas.getContext('2d')!
+  ctx.beginPath()
+  ctx.arc(0, 0, 0.4, 0, 2 * Math.PI)
+  ctx.globalAlpha = 0.05
+  ctx.filter = `blur(${size / 64}px)`;
+  ctx.fillStyle = 'white'
+  ctx.fill()
+  ctx.beginPath()
+  ctx.arc(0, 0, 0.2, 0, 2 * Math.PI)
+  ctx.globalAlpha = 1
+  ctx.fillStyle = '#444'
+  ctx.fill()
+  return canvas
+}
+
+export function hanagasaImage(size: number) {
+  const canvas = spottedImage(512, { n: 256, rmin: 0.004, rmax: 0.008, donut: 0.5 })
+  const ctx = canvas.getContext('2d')!
+  ctx.fillStyle = '#444'
+  ctx.globalAlpha = 0.4
+  ctx.fillRect(-1, -1, 2, 2)
+  ctx.beginPath()
+  radialPath(ctx, 32, 0.5, 0.7, 0.02)
+  ctx.globalAlpha = 0.8
+  ctx.lineWidth = 0.01
+  ctx.filter = `blur(${size / 256}px)`;
+  ctx.strokeStyle = '#402'
+  ctx.stroke()
+  return canvas
+}
 export function test() {
   const c1 = stripeImage(512)
   const c2 = radialTreeImage(512)
-  ;[c1, c2, mergeImage(512, c1, c2), spottedImage(512, { n: 80, rmin: 0.03, rmax: 0.07, donut: 0.05 })].forEach(canvas => {
-    canvas.style.boxShadow = '0 0 2px white'
+  ;[c1,
+    outerStripeImage(512),
+    c2,
+    mergeImage(512, c1, c2),
+    spottedImage(512, { n: 80, rmin: 0.03, rmax: 0.07, donut: 0.05 }),
+    spottedImage(512, { n: 128, rmin: 0.02, rmax: 0.04, donut: 0.5 }),
+    radialImage(512),
+    radialOwanImage(512),
+    hanagasaImage(512)
+  ].forEach(canvas => {
     canvas.style.position = 'relative'
     canvas.style.width = canvas.style.height = '512px'
     document.body.appendChild(canvas)
