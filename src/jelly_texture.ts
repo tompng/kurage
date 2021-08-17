@@ -10,6 +10,42 @@ function createCanvas(size: number) {
   return [canvas, ctx] as const
 }
 
+function smoothBezierParams(values: number[]) {
+  const n = values.length
+  const diffs = values.map((_, i) => 3 * (values[(i + 1) % n] - values[(i + n - 1) % n]))
+  let sum = 0
+  const a = -2 + Math.sqrt(3)
+  diffs.forEach(v => sum = sum * a + v )
+  const b = 1 / (1 - a ** n)
+  const scale = 1 / (4 + 2 * a) / 3
+  sum *= b
+  const params = diffs.map(v => sum = sum * a + v)
+  let rsum = 0
+  for (let i = n - 1; i >= 0; i--) rsum = rsum * a + diffs[i]
+  rsum *= b
+  for (let i = n - 1; i >= 0; i--) {
+    rsum = rsum * a + diffs[i]
+    params[i] = (params[i] + rsum - diffs[i]) * scale
+  }
+  return params
+}
+function curvePath(ctx: CanvasRenderingContext2D, points: { x: number; y: number }[]) {
+  const xparams = smoothBezierParams(points.map(p => p.x))
+  const yparams = smoothBezierParams(points.map(p => p.y))
+  ctx.moveTo(points[0].x, points[0].y)
+  for (let i = 0; i < points.length; i++) {
+    const j = (i + 1) % points.length
+    ctx.bezierCurveTo(
+      points[i].x + xparams[i],
+      points[i].y + yparams[i],
+      points[j].x - xparams[j],
+      points[j].y - yparams[j],
+      points[j].x,
+      points[j].y
+    )
+  }
+}
+
 export function stripeImage(size: number) {
   const [canvas, ctx] = createCanvas(size)
   ctx.fillStyle = '#666'
@@ -40,8 +76,61 @@ export function stripeImage(size: number) {
   ctx.stroke()
   return canvas
 }
-
-export function radialImage(size: number) {
+function circleRand(r = 1) {
+  while (true) {
+    const x = 2 * Math.random() - 1
+    const y = 2 * Math.random() - 1
+    if (x * x + y * y < 1) return [x * r, y * r]
+  }
+}
+export function spottedImage(size: number, props: { n: number; rmin: number; rmax: number, donut: number }) {
+  const { n, rmin, rmax, donut } = props
+  const [canvas, ctx] = createCanvas(size)
+  const N = Math.ceil(Math.sqrt(n) * 2.4)
+  const background = '#444'
+  ctx.fillStyle = background
+  ctx.fillRect(-1, -1, 2, 2)
+  const map = [...new Array(N)].map(() => [...new Array(N)].fill(0))
+  for (let i = 0; i < 4 * n; i++) {
+    const r = rmin + (rmax - rmin) * Math.random()
+    const [x, y] = circleRand(1 - r)
+    const ix = Math.floor((x + 1) * N / 2)
+    const iy = Math.floor((y + 1) * N / 2)
+    if (map[ix][iy]) continue
+    map[ix][iy - 1] = map[ix][iy] = map[ix][iy + 1] = true
+    if (map[ix - 1]) map[ix - 1][iy - 1] = map[ix - 1][iy] = map[ix - 1][iy + 1] = true
+    if (map[ix + 1]) map[ix + 1][iy - 1] = map[ix + 1][iy] = map[ix + 1][iy + 1] = true
+    ctx.save()
+    const n = 4 + Math.floor(3 * Math.random())
+    const offset = 2 * Math.PI * Math.random()
+    const points = [...new Array(n)].map((_, i) => {
+      const rr = r * (0.8 + 0.4 * Math.random())
+      const th = 2 * Math.PI * i / n + offset
+      return { x: x + rr * Math.cos(th), y: y + rr * Math.sin(th) }
+    })
+    ctx.beginPath()
+    curvePath(ctx, points)
+    ctx.closePath()
+    ctx.strokeStyle = 'white'
+    ctx.lineWidth = donut * 2
+    ctx.fillStyle = 'white'
+    ctx.filter = `blur(0.5px)`;
+    ctx.fill()
+    if (r > donut) {
+      ctx.beginPath()
+      const scale = (r - donut) / r
+      curvePath(ctx, points.map(p => ({ x: x + (p.x - x) * scale, y: y + (p.y - y) * scale, })))
+      ctx.arc(x, y, r - donut, 0, 2 * Math.PI)
+      ctx.filter = `blur(${size * donut / 8}px)`;
+      ctx.fillStyle = background
+      ctx.fill()
+      ctx.filter = 'none'
+    }
+    ctx.restore()
+  }
+  return canvas
+}
+export function radialTreeImage(size: number) {
   const [canvas, ctx] = createCanvas(size)
   ctx.fillStyle = '#444'
   ctx.fillRect(-1, -1, 2, 2)
@@ -100,14 +189,13 @@ export function radialImage(size: number) {
   ctx.globalAlpha = 1
   ctx.arc(0, 0, 0.3, 0, 2 * Math.PI)
   ctx.fill()
-
   return canvas
 }
 
 export function test() {
   const c1 = stripeImage(512)
-  const c2 = radialImage(512)
-  ;[c1, c2, mergeImage(512, c1, c2)].forEach(canvas => {
+  const c2 = radialTreeImage(512)
+  ;[c1, c2, mergeImage(512, c1, c2), spottedImage(512, { n: 80, rmin: 0.03, rmax: 0.07, donut: 0.05 })].forEach(canvas => {
     canvas.style.boxShadow = '0 0 2px white'
     canvas.style.position = 'relative'
     canvas.style.width = canvas.style.height = '512px'
