@@ -5,7 +5,15 @@ import { Matrix3, Point3D, normalize, cross, dot, scale as vectorScale, add as v
 import { BezierSegment, BezierStringRenderer } from './string_mesh'
 import { RibbonShape } from './ribbon_mesh'
 import { OceanDust, OceanDark, OceanSurface, OceanTerrain } from './ocean'
-import { test } from './jelly_texture';test();throw 'err'
+import { test, stripeImage, spottedImage, mergeImage, radialTreeImage } from './jelly_texture'
+// test();throw 'err'
+const textureCanvas = mergeImage(
+  512,
+  spottedImage(512, { n: 128, rmin: 0.03, rmax: 0.05, donut: 0.05 }),
+  radialTreeImage(512)
+)
+const texture = new THREE.Texture(textureCanvas)
+texture.needsUpdate = true
 
 function assignGlobal(data: Record<string, any>) {
   for (const i in data) (window as any)[i] = data[i]
@@ -103,7 +111,7 @@ window.onpointerup = e => {
   touch.id = null
 }
 
-const jelly = new JellyGrid(6)
+const jelly = new JellyGrid(6, texture)
 const oceanDust = new OceanDust(256)
 const oceanDark = new OceanDark()
 const oceanSurface = new OceanSurface()
@@ -119,8 +127,8 @@ for (let i = 0; i < 4; i++) {
     new String3D(20, 2, 1, 1)
   )
 }
-for (let i = 0; i < 4; i++) {
-  const th = 2 * Math.PI * i / 4
+for (let i = 0; i < 8; i++) {
+  const th = 2 * Math.PI * i / 8
   const cos = Math.cos(th)
   const sin = Math.sin(th)
   jelly.addString(
@@ -130,14 +138,28 @@ for (let i = 0; i < 4; i++) {
   )
 }
 
+// for (let i = 0; i < 64; i++) {
+//   const th = 2 * Math.PI * i / 64
+//   const cos = Math.cos(th)
+//   const sin = Math.sin(th)
+//   jelly.addString(
+//     { x: cos, y: sin, z: 1 },
+//     { x: cos, y: sin, z: 4 },
+//     new String3D(10, 0.2 + 0.1 * Math.random(), 1, 0.1)
+//   )
+// }
+
 for (let i = 0; i < 64; i++) {
   const th = 2 * Math.PI * i / 64
   const cos = Math.cos(th)
   const sin = Math.sin(th)
+  const rth = Math.PI / 2 * Math.sqrt(Math.random())
+  const r = Math.sin(rth)
+  let z = Math.cos(rth)
   jelly.addString(
-    { x: cos, y: sin, z: 1 },
-    { x: cos, y: sin, z: 4 },
-    new String3D(10, 0.2 + 0.1 * Math.random(), 1, 0.1)
+    { x: r * cos, y: r * sin, z: 1 - z },
+    { x: 0, y: 0, z: -1 },
+    new String3D(10, 0.15, 1, 0.1)
   )
 }
 
@@ -290,7 +312,7 @@ function render() {
   jelly.strings.forEach(({ string }, i) => {
     if (i < 4) return
     stringRenderer.request(
-      0.01,
+      0.015,
       0xBFBFFF,
       [...new Array(string.numSegments)].map((_, i) => {
         const ai = Math.max(i - 1, 0)

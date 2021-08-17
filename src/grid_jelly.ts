@@ -37,7 +37,7 @@ export class JellyGrid {
   strings: { pos: Point3D, dir: Point3D, string: String3D }[] = []
   cells: Cell[] = []
 
-  constructor(public segments: number) {
+  constructor(public segments: number, texture: THREE.Texture) {
     for (let iz = 0; iz < 2; iz++) {
       for (let ix = 0; ix <= segments; ix++) {
         this.coords[iz][ix]=[]
@@ -73,6 +73,7 @@ export class JellyGrid {
       return geometries.forEach((geometry, j) => {
         if (!geometry) return
         const material = createJellyShader()
+        material.uniforms.map.value = texture
         const mesh = new THREE.Mesh(geometry, material)
         mesh.frustumCulled = false
         this.cells.push({

@@ -10,7 +10,9 @@ type AxisXUniformKey = `vx${CoordID}`
 type AxisYUniformKey = `vy${CoordID}`
 type AxisZUniformKey = `vz${CoordID}`
 
-export type JellyUniforms = Record<PositionUniformKey | AxisXUniformKey | AxisYUniformKey | AxisZUniformKey, { value: THREE.Vector3 }>
+export type JellyUniforms = Record<PositionUniformKey | AxisXUniformKey | AxisYUniformKey | AxisZUniformKey, { value: THREE.Vector3 }> & {
+  map: { value: THREE.Texture | null }
+}
 function jellyUniforms() {
   const data: Record<string, { value: THREE.Vector3 } | undefined> = {}
   for (const id of coordIDs) {
@@ -19,7 +21,7 @@ function jellyUniforms() {
     data['vy' + id] = { value: new THREE.Vector3() }
     data['vz' + id] = { value: new THREE.Vector3() }
   }
-  return data as JellyUniforms
+  return { ...data, map: { value: null } } as JellyUniforms
 }
 
 export function createJellyShader() {
@@ -121,7 +123,7 @@ export function createJellyGeometryGrids(segments: number): (THREE.BufferGeometr
           )
           grids[ix][iy].t1.push(...t1s)
           grids[ix][iy].t2.push(...t2s)
-          grids[ix][iy].uv.push(pa[2].x, pa[2].y, pb[2].x, pb[2].y, pc[2].x, pc[2].y)
+          grids[ix][iy].uv.push(pa[3].x, pa[3].y, pb[3].x, pb[3].y, pc[3].x, pc[3].y)
         }
       }
     }
@@ -157,7 +159,7 @@ export function createJellyGeometryGrids(segments: number): (THREE.BufferGeometr
     fs[i].l = fs[i - 1].l + Math.hypot(fs[i].r - fs[i - 1].r, fs[i].z - fs[i - 1].z)
   }
   const lmax = fs[fs.length - 1].l
-  const lscale = 2 * 0.9 / lmax
+  const uvratio = 0.4
   const arcCoords: Point[][] = []
   for (let i = 1; i < N; i++) {
     const pf = fs[i - 1]
@@ -165,6 +167,7 @@ export function createJellyGeometryGrids(segments: number): (THREE.BufferGeometr
     const nf = fs[i + 1]
     const len = Math.min(nf.l - l, l - pf.l)
     const n = Math.max(Math.round(2 * Math.PI * r / len / 8), 1) * 8
+    const uvl = 1 - (l < lmax / 2 ? uvratio * 2 * l / lmax : uvratio + (1 - uvratio) * (2 * l / lmax - 1))
     const arc: Point[] = []
     for (let j = 0; j < n; j++) {
       const th = 2 * Math.PI * j / n
@@ -174,7 +177,7 @@ export function createJellyGeometryGrids(segments: number): (THREE.BufferGeometr
         p: gridSafe({ x: r * cos, y: r * sin, z }),
         t1: { x: dr * cos, y: dr * sin, z: dz },
         t2: { x: sin, y: -cos, z: 0 },
-        uv: { x: l * lscale * cos + 0.5, y: l * lscale * cos + 0.5, z: 0 }
+        uv: { x: (uvl * cos + 1) / 2, y: (uvl * sin + 1) / 2, z: 0 }
       })
     }
     arcCoords.push(arc)
@@ -204,7 +207,7 @@ export function createJellyGeometryGrids(segments: number): (THREE.BufferGeometr
         p: gridSafe({ x: r * cos, y: r * sin, z }),
         t1: { x: dr * cos, y: dr * sin, z: dz },
         t2: { x: sin, y: -cos, z: 0 },
-        uv: { x: l * lscale * cos + 0.5, y: l * lscale * cos + 0.5, z: 0 }
+        uv: { x: (l / lmax * cos + 1) / 2, y: (l / lmax * sin + 1) / 2, z: 0 }
       }
       const j = (i + 1) % arc.length
       add(arc === firstArc ? [p, arc[i], arc[j]] : [arc[i], p, arc[j]])
