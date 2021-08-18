@@ -120,12 +120,11 @@ function ribbonUniforms(): RibbonUniforms {
   }
 }
 
-export class RibbonShape {
+export class RibbonRenderer {
   segments: RibbonSegment[]
-  ribbon: Ribbon
-  constructor(public numSegments: number, w: number, h: number) {
+  scene = new THREE.Scene()
+  constructor(public numSegments: number, public w: number, public h: number) {
     const geometries = createRibbonGeometries(numSegments, 20, 8)
-    this.ribbon = new Ribbon(numSegments)
     this.segments = geometries.map(geometry => {
       const uniforms = ribbonUniforms()
       const material = new THREE.ShaderMaterial({
@@ -138,15 +137,12 @@ export class RibbonShape {
       })
       const mesh = new Mesh(geometry, material)
       mesh.frustumCulled = false
+      this.scene.add(mesh)
       return { mesh, uniforms, material }
     })
   }
-  addToScene(scene: THREE.Scene) {
-    this.segments.forEach(({ mesh }) => scene.add(mesh))
-  }
-  update(string: String3D, dir: Point3D) {
-    const { numSegments, segments, ribbon } = this
-    ribbon.update(dir, string.directions, 0.05)
+  render(renderer: THREE.WebGLRenderer, camera: THREE.Camera, string: String3D, ribbon: Ribbon) {
+    const { numSegments, segments, w, h } = this
     for (let i = 0; i <= numSegments; i++) {
       const ia = Math.max(0, i - 1)
       const ib = Math.min(i + 1, numSegments - 1)
@@ -161,8 +157,6 @@ export class RibbonShape {
       const un = segments[i]?.uniforms
       const diry = ribbon.tan1s[i]
       const dirx = ribbon.tan2s[i]
-      const w = 0.2
-      const h = 0.2
       if (up) {
         up.v1.value.set(x, y, z)
         up.vx1.value.set(w * dirx.x, w * dirx.y, w * dirx.z)
@@ -176,36 +170,6 @@ export class RibbonShape {
         un.vz0.value.set(dx, dy, dz)
       }
     }
-  }
-  updateDebug() {
-    const dx = 1
-    const s = 0
-    const t = performance.now() / 1000
-    const { numSegments } = this
-    const positions = [...new Array(this.numSegments + 1)].map((_, i) => 
-      [dx * (i - this.numSegments / 2), s * Math.sin(i/2 + t), s * Math.cos(i/2 + 1.2 * t)] as const
-    )
-    function fz(i: number) {
-      const ia = Math.max(0, i - 1)
-      const ib = Math.min(i + 1, numSegments - 1)
-      return [0, 1, 2].map(axis => (positions[ib][axis] - positions[ia][axis]) / (ib - ia)) as [number, number, number]
-    }
-    this.segments.forEach(({ uniforms, material }, i) => {
-      const t0 = t / 3.2 + i / 3
-      const t1 = t / 3.2 + (i + 1) / 3
-      const cos0 = Math.cos(t0)
-      const sin0 = Math.sin(t0)
-      const cos1 = Math.cos(t1)
-      const sin1 = Math.sin(t1)
-      uniforms.v0.value.set(...positions[i])
-      uniforms.v1.value.set(...positions[i + 1])
-      uniforms.vx0.value.set(0, dx*4*cos0, dx*4*sin0)
-      uniforms.vx1.value.set(0, dx*4*cos1, dx*4*sin1)
-      uniforms.vy0.value.set(0, dx*4*sin0, -dx*4*cos0)
-      uniforms.vy1.value.set(0, dx*4*sin1, -dx*4*cos1)
-      uniforms.vz0.value.set(...fz(i))
-      uniforms.vz1.value.set(...fz(i + 1))
-      material.needsUpdate = true
-    })
+    renderer.render(this.scene, camera)
   }
 }

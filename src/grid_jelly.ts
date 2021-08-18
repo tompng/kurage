@@ -8,7 +8,7 @@ import {
   add as vectorAdd,
   sub as vectorSub
 } from './math'
-import type { String3D } from './string'
+import { Ribbon, String3D } from './string'
 
 type JellyCoord = {
   r: number
@@ -29,7 +29,7 @@ type Cell = {
   geometry: THREE.BufferGeometry
 }
 
-type StringRenderFunc = (string: String3D) => void
+type StringRenderFunc = ((string: String3D) => void) | ((string: String3D, ribbon: Ribbon) => void)
 
 export class JellyGrid {
   position: Point3D = { x: 0, y: 0, z: -2 }
@@ -37,7 +37,7 @@ export class JellyGrid {
   velocity: Point3D = { x: 0, y: 0, z: 0 }
   momentum: Point3D = { x: 0, y: 0, z: 0 }
   coords: [JellyCoord[][],JellyCoord[][]] = [[], []]
-  strings: { pos: Point3D, dir: Point3D, string: String3D; render: StringRenderFunc }[] = []
+  strings: { pos: Point3D, dir: Point3D, string: String3D; render: StringRenderFunc; ribbon?: Ribbon }[] = []
   cells: Cell[] = []
 
   constructor(public segments: number, texture: THREE.Texture) {
@@ -176,8 +176,9 @@ export class JellyGrid {
       set(uniforms.vz111, vz11)
     })
   }
-  addString(pos: Point3D, dir: Point3D, string: String3D, render: StringRenderFunc) {
-    this.strings.push({ pos, dir, string, render })
+  addString(pos: Point3D, dir: Point3D, string: String3D, render: StringRenderFunc, hasRibbon = false) {
+    const ribbon = hasRibbon ? new Ribbon(string.numSegments) : undefined
+    this.strings.push({ pos, dir, string, render, ribbon })
     string.directions
     const gpos = this.transformGridPoint(pos)
     string.points[0].x = gpos.x
@@ -350,7 +351,7 @@ export class JellyGrid {
         }
       }
     }
-    this.strings.forEach(({ pos, dir, string }) => {
+    this.strings.forEach(({ pos, dir, string, ribbon }) => {
       string.F.forEach(f => { f.z += 0.0002 })
       const n = Math.min(Math.ceil(0.1 / string.segmentLength), string.numSegments)
       const firstPos = this.transformGridPoint(pos)
@@ -370,6 +371,10 @@ export class JellyGrid {
       }
       const f = string.update(dt, { first: firstPos })
       this.addGridForce(pos, f.first, -dt)
+      if (ribbon) {
+        const ribbonDir = vectorSub(this.transformGridPoint({ x: 0, y: 0, z: pos.z }), this.transformGridPoint(pos))
+        ribbon.update(ribbonDir, string.directions, Math.max(5 * dt, 1))
+      }
     })
     this.updateMesh()
   }
@@ -456,6 +461,6 @@ export class JellyGrid {
     ctx.restore()
   }
   renderStrings() {
-    this.strings.forEach(({ string, render }) => render(string))
+    this.strings.forEach(({ string, ribbon, render }) => (render as (s: String3D, r: Ribbon | undefined) => void)(string, ribbon))
   }
 }

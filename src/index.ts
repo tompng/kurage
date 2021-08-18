@@ -3,7 +3,7 @@ import { JellyGrid } from './grid_jelly'
 import * as THREE from 'three'
 import { Matrix3, Point3D, normalize, cross, dot, scale as vectorScale, add as vectorAdd, sub as vectorSub } from './math'
 import { BezierStringRenderer } from './string_mesh'
-import { RibbonShape } from './ribbon_mesh'
+import { RibbonRenderer } from './ribbon_mesh'
 import { OceanDust, OceanDark, OceanSurface, OceanTerrain } from './ocean'
 import textureUrl from './images/jelly/0.jpg'
 
@@ -16,6 +16,9 @@ texture.needsUpdate = true
 const stringRenderer = new BezierStringRenderer(4, 5)
 function requestWhiteBlueString(string: String3D) {
   stringRenderer.request(0.015, 0xBFBFFF, string.bezierSegments())
+}
+function requestThinString(string: String3D) {
+  stringRenderer.request(0.008, 0xBFBFFF, string.bezierSegments())
 }
 
 function assignGlobal(data: Record<string, any>) {
@@ -120,6 +123,12 @@ const oceanDark = new OceanDark()
 const oceanSurface = new OceanSurface()
 const oceanTerrain = new OceanTerrain()
 
+const ribbonSegments = 20
+const ribbonRenderer = new RibbonRenderer(ribbonSegments, 0.3, 0.3)
+function renderRibbon(string: String3D, ribbon: Ribbon) {
+  ribbonRenderer.render(renderer, camera, string, ribbon)
+}
+
 for (let i = 0; i < 4; i++) {
   const th = 2 * Math.PI * i / 4 + 1
   const cos = Math.cos(th)
@@ -127,8 +136,9 @@ for (let i = 0; i < 4; i++) {
   jelly.addString(
     { x: 0.3 * cos, y: 0.3 * sin, z: 1 },
     { x: cos, y: sin, z: 10 },
-    new String3D(20, 2, 1, 1),
-    () => {}
+    new String3D(ribbonSegments, 2, 1, 1),
+    renderRibbon,
+    true
   )
 }
 for (let i = 0; i < 8; i++) {
@@ -143,17 +153,17 @@ for (let i = 0; i < 8; i++) {
   )
 }
 
-// for (let i = 0; i < 64; i++) {
-//   const th = 2 * Math.PI * i / 64
-//   const cos = Math.cos(th)
-//   const sin = Math.sin(th)
-//   jelly.addString(
-//     { x: cos, y: sin, z: 1 },
-//     { x: cos, y: sin, z: 4 },
-//     new String3D(10, 0.2 + 0.1 * Math.random(), 1, 0.1),
-//     requestWhiteBlueString
-//   )
-// }
+for (let i = 0; i < 128; i++) {
+  const th = 2 * Math.PI * i / 128
+  const cos = Math.cos(th)
+  const sin = Math.sin(th)
+  jelly.addString(
+    { x: cos, y: sin, z: 1 },
+    { x: cos, y: sin, z: 4 },
+    new String3D(5, 0.2 + 0.1 * Math.random(), 1, 0.1),
+    requestThinString
+  )
+}
 
 
 function requestHanagasaString(string: String3D) {
@@ -242,9 +252,6 @@ const clovers = [0, 1, 2, 3].map(i => {
   }
   return line
 })
-
-const ribbonshapes = [0,1,2,3].map(i => new RibbonShape(jelly.strings[i].string.numSegments, 0, 0))
-ribbonshapes.forEach(r => r.addToScene(scene))
 
 class SmoothPoint3D {
   v1: Point3D = { x: 0, y: 0, z: 0 }
@@ -368,10 +375,6 @@ function render() {
   jelly.renderStrings()
   stringRenderer.render(renderer, camera)
   const center = jelly.transformGridPoint({ x: 0, y: 0, z: 0 })
-  ribbonshapes.forEach((r, i) => {
-    const ribbonDir = vectorSub(center, jelly.transformGridPoint(jelly.strings[i].pos))
-    r.update(jelly.strings[i].string, ribbonDir)
-  })
   renderer.render(scene, camera)
   oceanDust.render(renderer, camera)
 
