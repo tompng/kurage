@@ -6,6 +6,9 @@ export class String3D {
   points: Point3D[] = []
   weights: number[] = []
   F: Point3D[] = []
+  friction = 0.5
+  hardness = 4
+  decay = 4
   constructor(public numSegments: number, public length: number, public startPointWeight: number, weight: number) {
     this.segmentLength = length / numSegments
     const { directions, velocities, F, weights } = this
@@ -33,8 +36,8 @@ export class String3D {
     })
   }
 
-  addHardnessForce(hardness: number, decay: number) {
-    const { F, directions, velocities, segmentLength, numSegments } = this
+  addForce() {
+    const { F, weights, directions, velocities, segmentLength, numSegments, hardness, decay, friction } = this
     for (let i = 1; i < numSegments; i++) {
       const v = velocities[i]
       const va = sub(velocities[i - 1], v)
@@ -59,17 +62,13 @@ export class String3D {
       fb.y -= rfb.y
       fb.z -= rfb.z
     }
-  }
-
-  addForce(gravity: number, friction: number) {
-    const { F, velocities, numSegments, weights } = this
     for (let i = 1; i <= numSegments; i++) {
       const w = weights[i]
       const v = velocities[i]
       const f = F[i]
       f.x -= v.x * friction * w
       f.y -= v.y * friction * w
-      f.z -= (v.z * friction - gravity) * w
+      f.z -= v.z * friction * w
     }
   }
 
@@ -82,6 +81,7 @@ export class String3D {
     const tt: number[] = []
     const tb: number[] = []
     const T: number[] = []
+    this.addForce()
     for (let i = 0; i < numSegments; i++) {
       // vnext[i] = v[i] + dt * (F[i] + T[i - 1] * dir[i - 1] - T[i] * dir[i]) / weight
       // constraints: dot(vnext[i + 1] - vnext[i], dir[i]) = 0

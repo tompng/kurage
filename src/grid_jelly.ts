@@ -348,8 +348,6 @@ export class JellyGrid {
       }
     }
     this.strings.forEach(({ pos, dir, string }) => {
-      string.addHardnessForce(4, 4)
-      string.addForce(0, 0.5)
       string.F.forEach(f => { f.z += 0.0002 })
       const n = Math.min(Math.ceil(0.1 / string.segmentLength), string.numSegments)
       const firstPos = this.transformGridPoint(pos)
