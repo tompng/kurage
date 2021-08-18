@@ -5,7 +5,7 @@ import { Matrix3, Point3D, normalize, cross, dot, scale as vectorScale, add as v
 import { BezierSegment, BezierStringRenderer } from './string_mesh'
 import { RibbonShape } from './ribbon_mesh'
 import { OceanDust, OceanDark, OceanSurface, OceanTerrain } from './ocean'
-import textureUrl from './images/jelly/4.jpg'
+import textureUrl from './images/jelly/0.jpg'
 
 const texture = new THREE.TextureLoader().load(textureUrl)
 texture.wrapS = THREE.ClampToEdgeWrapping
@@ -116,7 +116,7 @@ const oceanSurface = new OceanSurface()
 const oceanTerrain = new OceanTerrain()
 
 for (let i = 0; i < 4; i++) {
-  const th = 2 * Math.PI * i / 4
+  const th = 2 * Math.PI * i / 4 + 1
   const cos = Math.cos(th)
   const sin = Math.sin(th)
   jelly.addString(

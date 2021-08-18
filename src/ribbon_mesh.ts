@@ -20,9 +20,8 @@ varying vec3 vnormal;
 varying vec2 vtexcoord;
 void main() {
   float d = dot(normalize(cameraPosition - vposition), normalize(vnormal));
-  d *= d;
-  float c = (1.0 - vtexcoord.x * vtexcoord.x) * vtexcoord.y * (1.0 - vtexcoord.y) * 4.0;
-  gl_FragColor = vec4(vec3(1.5, 1.5, 2) * (1.0 - d) * d * c, 1);
+  float c = max((1.0 - vtexcoord.x * vtexcoord.x) * vtexcoord.y * (1.0 - vtexcoord.y), 0.0);
+  gl_FragColor = vec4(vec3(0.8, 0.8, 1) * c * c * 4.0, 1);
 }
 `
 
@@ -160,8 +159,8 @@ export class RibbonShape {
       const dz = (pn.z - pp.z) / di
       const up = segments[i - 1]?.uniforms
       const un = segments[i]?.uniforms
-      const diry = ribbon.normals[i]
-      const dirx = normalize(cross(diry, { x: dx, y: dy, z: dz }))
+      const diry = ribbon.tan1s[i]
+      const dirx = ribbon.tan2s[i]
       const w = 0.2
       const h = 0.2
       if (up) {

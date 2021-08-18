@@ -164,60 +164,49 @@ export class String3D {
 }
 
 export class Ribbon {
-  normals: Point3D[] = []
+  tan1s: Point3D[] = []
+  tan2s: Point3D[] = []
   constructor(public numSegments: number) {
-    const { normals } = this
+    const { tan1s, tan2s } = this
     for (let i = 0; i <= numSegments; i++) {
-      normals.push({ x: 0, y: 0, z: 1 })
+      tan1s.push({ x: 0, y: 0, z: 1 })
+      tan2s.push({ x: 0, y: 1, z: 0 })
     }
   }
-  fill({ x, y, z }: Point3D) {
-    this.normals.forEach(d => {
-      d.x = x
-      d.y = y
-      d.z = z
+  fill(t1: Point3D, t2: Point3D) {
+    ([[this.tan1s, t1], [this.tan2s, t2]] as const).forEach(([ts, t]) => {
+      ts.forEach(p => {
+        p.x = t.x
+        p.y = t.y
+        p.z = t.z
+      })
     })
   }
   update({ x, y, z }: Point3D, directions: Point3D[], rate: number) {
-    const { normals, numSegments } = this
-    const start = normals[0]
-    start.x = x
-    start.y = y
-    start.z = z
-    let prev = { x, y, z }
+    const { tan1s, tan2s, numSegments } = this
+    const first1 = tan1s[0]
+    const first2 = tan1s[0]
+    first1.x = x
+    first1.y = y
+    first1.z = z
+    const f2 = normalize(cross(directions[0], first1))
+    first2.x = f2.x
+    first2.y = f2.y
+    first2.z = f2.z
+    let prev = first1
     for (let i = 1; i <= numSegments; i++) {
       const dir = i < numSegments ? normalize(add(directions[i - 1], directions[i])) : directions[i - 1]
-      const normal = normals[i]
-      const pnorm = normalize(weightedSum([1, prev], [-dot(prev, dir), dir]))
-      prev = normalize(weightedSum([rate, pnorm], [1 - rate, normal]))
-      normal.x = prev.x
-      normal.y = prev.y
-      normal.z = prev.z
+      const tan1 = tan1s[i]
+      const tan2 = tan2s[i]
+      const dtan1 = normalize(weightedSum([1, prev], [-dot(prev, dir), dir]))
+      const dtan2 = cross(dir, dtan1)
+      tan1.x = tan1.x * (1 - rate) + rate * dtan1.x
+      tan1.y = tan1.y * (1 - rate) + rate * dtan1.y
+      tan1.z = tan1.z * (1 - rate) + rate * dtan1.z
+      tan2.x = tan2.x * (1 - rate) + rate * dtan2.x
+      tan2.y = tan2.y * (1 - rate) + rate * dtan2.y
+      tan2.z = tan2.z * (1 - rate) + rate * dtan2.z
+      prev = tan1
     }
-  }
-  renderToCanvas(ctx: CanvasRenderingContext2D, string: String3D, width: number[]) {
-    const { points } = string
-    const { normals, numSegments } = this
-    const w0 = width[0] || 0
-    const w2 = width[2] ?? width[1] ?? w0
-    const w1 = width[2] ? width[1] : (w2 + w0) / 2
-    ctx.beginPath()
-    const widthAt = (t: number) => w0 + (w2 - w0) * t + (2 * w1 - w2 - w0) * t * (1 - t) * 2
-    for (let i = 0; i <= numSegments; i++) {
-      const len = widthAt((i + 1) / (numSegments + 2))
-      const p = points[i]
-      const n = normals[i]
-      ctx.moveTo(p.x, p.z)
-      ctx.lineTo(p.x + len * n.x, p.z + len * n.z)
-    }
-    for (let i = 0; i <= numSegments; i++) {
-      const len = widthAt((i + 1) / (numSegments + 2))
-      const p = points[i]
-      const n = normals[i]
-      const x = p.x + len * n.x
-      const y = p.z + len * n.z
-      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)
-    }
-    ctx.stroke()
   }
 }
