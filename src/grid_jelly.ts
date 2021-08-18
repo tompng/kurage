@@ -28,13 +28,16 @@ type Cell = {
   mesh: THREE.Mesh
   geometry: THREE.BufferGeometry
 }
+
+type StringRenderFunc = (string: String3D) => void
+
 export class JellyGrid {
   position: Point3D = { x: 0, y: 0, z: -2 }
   rotation = Matrix3.fromRotation({ x: 3, y: 2, z: 1 }, 1)
   velocity: Point3D = { x: 0, y: 0, z: 0 }
   momentum: Point3D = { x: 0, y: 0, z: 0 }
   coords: [JellyCoord[][],JellyCoord[][]] = [[], []]
-  strings: { pos: Point3D, dir: Point3D, string: String3D }[] = []
+  strings: { pos: Point3D, dir: Point3D, string: String3D; render: StringRenderFunc }[] = []
   cells: Cell[] = []
 
   constructor(public segments: number, texture: THREE.Texture) {
@@ -173,8 +176,8 @@ export class JellyGrid {
       set(uniforms.vz111, vz11)
     })
   }
-  addString(pos: Point3D, dir: Point3D, string: String3D) {
-    this.strings.push({ pos, dir, string })
+  addString(pos: Point3D, dir: Point3D, string: String3D, render: StringRenderFunc) {
+    this.strings.push({ pos, dir, string, render })
     string.directions
     const gpos = this.transformGridPoint(pos)
     string.points[0].x = gpos.x
@@ -451,5 +454,8 @@ export class JellyGrid {
     ctx.strokeStyle = 'red'
     this.strings.forEach(({ string }) => string.renderToCanvas(ctx))
     ctx.restore()
+  }
+  renderStrings() {
+    this.strings.forEach(({ string, render }) => render(string))
   }
 }

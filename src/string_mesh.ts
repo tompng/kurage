@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import vertexShader from './shaders/bezier_tube.vert'
 import fragmentShader from './shaders/bezier_tube.frag'
-import { Point3D } from './math'
+import { BezierSegment, BezierSegmentWithColor } from './string'
 
 export function cylinderGeometry(lsections: number, rsections: number) {
   const geometry = new THREE.BufferGeometry()
@@ -64,9 +64,6 @@ const vmaterial = new THREE.ShaderMaterial({
   blending: THREE.AdditiveBlending,
   depthWrite: false
 })
-
-export type BezierSegment = [Point3D, Point3D, Point3D, Point3D]
-export type BezierSegmentWithColor = [Point3D, Point3D, Point3D, Point3D, number, number]
 
 export class BezierStringRenderer {
   MAX_COUNT = 1024
