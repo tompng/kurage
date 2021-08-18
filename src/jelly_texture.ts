@@ -48,6 +48,13 @@ function curvePath(ctx: CanvasRenderingContext2D, points: { x: number; y: number
   }
 }
 
+function plainImage(size: number, color = '#666') {
+  const [canvas, ctx] = createCanvas(size)
+  ctx.fillStyle = color
+  ctx.fillRect(-1, -1, 2, 2)
+  return canvas
+}
+
 export function stripeImage(size: number) {
   const [canvas, ctx] = createCanvas(size)
   ctx.fillStyle = '#666'
@@ -68,12 +75,12 @@ export function stripeImage(size: number) {
   }
   ctx.lineWidth = 0.1
   ctx.globalAlpha = 0.8
-  ctx.strokeStyle = '#f66'
+  ctx.strokeStyle = '#f84'
   ctx.filter = `blur(${size / 40}px)`;
   ctx.stroke()
-  ctx.lineWidth = 0.05
-  ctx.globalAlpha = 0.5
-  ctx.strokeStyle = '#fa6'
+  ctx.lineWidth = 0.04
+  ctx.globalAlpha = 1
+  ctx.strokeStyle = '#800'
   ctx.filter = `blur(${size / 80}px)`;
   ctx.stroke()
   return canvas
@@ -271,24 +278,6 @@ export function hanagasaImage(size: number) {
   ctx.stroke()
   return canvas
 }
-export function test() {
-  const c1 = stripeImage(512)
-  const c2 = radialTreeImage(512)
-  ;[c1,
-    outerStripeImage(512),
-    c2,
-    mergeImage(512, c1, c2),
-    spottedImage(512, { n: 80, rmin: 0.03, rmax: 0.07, donut: 0.05 }),
-    spottedImage(512, { n: 128, rmin: 0.02, rmax: 0.04, donut: 0.5 }),
-    radialImage(512),
-    radialOwanImage(512),
-    hanagasaImage(512)
-  ].forEach(canvas => {
-    canvas.style.position = 'relative'
-    canvas.style.width = canvas.style.height = '512px'
-    document.body.appendChild(canvas)
-  })
-}
 
 export function mergeImage(size: number, front: HTMLCanvasElement, back: HTMLCanvasElement, ratio = 0.6, mix = 0.02) {
   const [canvas, ctx] = createCanvas(size)
@@ -327,4 +316,57 @@ export function mergeImage(size: number, front: HTMLCanvasElement, back: HTMLCan
   }
   ctx.putImageData(imgdata, 0, 0)
   return canvas
+}
+
+export function generate() {
+  const backTree = radialTreeImage(1024)
+  const backRadial = radialImage(1024)
+  const backOwan = radialOwanImage(1024)
+  const backPlain = plainImage(1, backBGColor)
+  const plain = plainImage(1)
+  const plainDark = plainImage(1, '#333')
+  mergeImage(512, hanagasaImage(1024), backRadial)
+  return [
+    mergeImage(512, stripeImage(1024), backRadial),
+    mergeImage(512, outerStripeImage(1024), backRadial),
+    mergeImage(512, hanagasaImage(1024), backRadial),
+    mergeImage(512, spottedImage(1024, { n: 80, rmin: 0.03, rmax: 0.07, donut: 0.05 }), backRadial),
+    mergeImage(512, spottedImage(1024, { n: 128, rmin: 0.02, rmax: 0.04, donut: 0.5 }), backRadial),
+    mergeImage(512, plainDark, backTree),
+    mergeImage(512, plainDark, backOwan),
+    mergeImage(512, plainDark, backRadial),
+    mergeImage(512, plainDark, backPlain),
+  ]
+}
+
+export function preview(canvases = generate()) {
+  const modal = document.createElement('div')
+  const close = document.createElement('a')
+  const download = document.createElement('a')
+  close.innerHTML = '&times'
+  close.style.cssText = 'position:absolute;right:8px;top:8px'
+  download.textContent = 'download'
+  modal.appendChild(close)
+  modal.appendChild(download)
+  close.onclick = () => { modal.style.display = 'none' }
+  modal.style.cssText = `
+    position:fixed;left:30%;top:40%;width:40%;height:20%;background:white;display:none;z-index:9999;
+  `
+  document.body.appendChild(modal)
+  canvases.forEach((canvas, i) => {
+    canvas.style.position = 'relative'
+    canvas.style.width = canvas.style.height = '512px'
+    document.body.appendChild(canvas)
+    canvas.onclick = () => {
+      modal.style.display = 'none'
+      canvas.toBlob(blob => {
+        if (!blob) return
+        modal.style.display = 'block'
+        download.download = `${i}.jpg`
+        download.textContent = `download ${i}.jpg(${blob.size})`
+        download.href = URL.createObjectURL(blob)
+      }, 'image/jpeg', 0.95)
+    }
+  })
+
 }
