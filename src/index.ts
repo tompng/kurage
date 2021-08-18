@@ -5,16 +5,12 @@ import { Matrix3, Point3D, normalize, cross, dot, scale as vectorScale, add as v
 import { BezierSegment, BezierStringRenderer } from './string_mesh'
 import { RibbonShape } from './ribbon_mesh'
 import { OceanDust, OceanDark, OceanSurface, OceanTerrain } from './ocean'
-import { test, stripeImage, spottedImage, mergeImage, radialTreeImage } from './jelly_texture'
-// test();throw 'err'
-const textureCanvas = mergeImage(
-  512,
-  spottedImage(512, { n: 128, rmin: 0.03, rmax: 0.05, donut: 0.05 }),
-  radialTreeImage(512)
-)
-const texture = new THREE.Texture(textureCanvas)
+import textureUrl from './images/jelly/4.jpg'
+
+const texture = new THREE.TextureLoader().load(textureUrl)
 texture.wrapS = THREE.ClampToEdgeWrapping
 texture.wrapT = THREE.ClampToEdgeWrapping
+texture.generateMipmaps = true
 texture.needsUpdate = true
 
 function assignGlobal(data: Record<string, any>) {
