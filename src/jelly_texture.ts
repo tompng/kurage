@@ -10,6 +10,8 @@ function createCanvas(size: number) {
   return [canvas, ctx] as const
 }
 
+const backBGColor = '#222'
+
 function smoothBezierParams(values: number[]) {
   const n = values.length
   const diffs = values.map((_, i) => 3 * (values[(i + 1) % n] - values[(i + n - 1) % n]))
@@ -125,7 +127,7 @@ export function spottedImage(size: number, props: { n: number; rmin: number; rma
     ctx.strokeStyle = 'white'
     ctx.lineWidth = donut * 2
     ctx.fillStyle = 'white'
-    ctx.filter = `blur(0.5px)`;
+    ctx.filter = `blur(${size / 512}px)`;
     ctx.fill()
     if (r > donut) {
       ctx.beginPath()
@@ -143,7 +145,7 @@ export function spottedImage(size: number, props: { n: number; rmin: number; rma
 }
 export function radialTreeImage(size: number) {
   const [canvas, ctx] = createCanvas(size)
-  ctx.fillStyle = '#444'
+  ctx.fillStyle = backBGColor
   ctx.fillRect(-1, -1, 2, 2)
   ctx.beginPath()
   const lines: number[][] = []
@@ -191,9 +193,9 @@ export function radialTreeImage(size: number) {
     render(lines.slice(M * i / K, M * (i + 1) / K), 0)
   }
   ctx.strokeStyle = 'white'
-  ctx.globalAlpha = 0.1
-  ctx.lineWidth = 0.02
-  ctx.filter = `blur(${size / 128}px)`;
+  ctx.globalAlpha = 0.25
+  ctx.lineWidth = 0.01
+  ctx.filter = `blur(${size / 256}px)`;
   ctx.stroke()
   ctx.filter = `blur(${size / 32}px)`;
   ctx.beginPath()
@@ -220,12 +222,12 @@ function radialPath(ctx: CanvasRenderingContext2D, n: number, rmin: number, rmax
 
 export function radialImage(size: number) {
   const [canvas, ctx] = createCanvas(size)
-  ctx.fillStyle = '#444'
+  ctx.fillStyle = backBGColor
   ctx.fillRect(-1, -1, 2, 2)
   ctx.beginPath()
   radialPath(ctx, 48, 0, 0, 0.02)
   ctx.strokeStyle = 'white'
-  ctx.globalAlpha = 0.1
+  ctx.globalAlpha = 0.4
   ctx.lineWidth = 0.02
   ctx.filter = `blur(${size / 128}px)`;
   ctx.stroke()
@@ -242,27 +244,27 @@ export function radialOwanImage(size: number) {
   const ctx = canvas.getContext('2d')!
   ctx.beginPath()
   ctx.arc(0, 0, 0.4, 0, 2 * Math.PI)
-  ctx.globalAlpha = 0.05
+  ctx.globalAlpha = 0.2
   ctx.filter = `blur(${size / 64}px)`;
   ctx.fillStyle = 'white'
   ctx.fill()
   ctx.beginPath()
   ctx.arc(0, 0, 0.2, 0, 2 * Math.PI)
   ctx.globalAlpha = 1
-  ctx.fillStyle = '#444'
+  ctx.fillStyle = backBGColor
   ctx.fill()
   return canvas
 }
 
 export function hanagasaImage(size: number) {
-  const canvas = spottedImage(512, { n: 256, rmin: 0.004, rmax: 0.008, donut: 0.5 })
+  const canvas = spottedImage(512, { n: 256, rmin: 0.006, rmax: 0.01, donut: 0.5 })
   const ctx = canvas.getContext('2d')!
-  ctx.fillStyle = '#444'
+  ctx.fillStyle = '#888'
   ctx.globalAlpha = 0.4
   ctx.fillRect(-1, -1, 2, 2)
   ctx.beginPath()
   radialPath(ctx, 32, 0.5, 0.7, 0.02)
-  ctx.globalAlpha = 0.8
+  ctx.globalAlpha = 1
   ctx.lineWidth = 0.01
   ctx.filter = `blur(${size / 256}px)`;
   ctx.strokeStyle = '#402'
@@ -302,8 +304,8 @@ export function mergeImage(size: number, front: HTMLCanvasElement, back: HTMLCan
       const cx = x - size / 2
       const cy = y - size / 2
       const dr = Math.hypot(cx, cy)
-      const dx = cx / dr
-      const dy = cy / dr
+      const dx = dr ? cx / dr : 1
+      const dy = dr ? cy / dr : 0
       const r = dr * 2 / size
       const frontR = r / (ratio + mix)
       const backR = Math.max((1 - r) / (1 - ratio + mix), 0)
@@ -312,11 +314,11 @@ export function mergeImage(size: number, front: HTMLCanvasElement, back: HTMLCan
         const bidx = 4 * (Math.floor(bsize * (1 + dy * backR) / 2) * bsize + Math.floor(bsize * (1 + dx * backR) / 2))
         for (let j = 0; j < 4; j++) data[idx + j] = bdata[bidx + j]
       } else if (t <= 0) {
-        const fidx = 4 * (Math.floor(fsize * (1 + dy * frontR) / 2) * fsize + Math.floor(bsize * (1 + dx * frontR) / 2))
+        const fidx = 4 * (Math.floor(fsize * (1 + dy * frontR) / 2) * fsize + Math.floor(fsize * (1 + dx * frontR) / 2))
         for (let j = 0; j < 4; j++) data[idx + j] = fdata[fidx + j]
       } else {
         const bidx = 4 * (Math.floor(bsize * (1 + dy * backR) / 2) * bsize + Math.floor(bsize * (1 + dx * backR) / 2))
-        const fidx = 4 * (Math.floor(fsize * (1 + dy * frontR) / 2) * fsize + Math.floor(bsize * (1 + dx * frontR) / 2))
+        const fidx = 4 * (Math.floor(fsize * (1 + dy * frontR) / 2) * fsize + Math.floor(fsize * (1 + dx * frontR) / 2))
         const bw = (3 - 2 * t) * t * t
         const fw = 1 - bw
         for (let j = 0; j < 4; j++) data[idx + j] = fdata[fidx + j] * fw + bw * bdata[bidx + j]

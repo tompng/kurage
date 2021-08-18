@@ -159,7 +159,7 @@ export function createJellyGeometryGrids(segments: number): (THREE.BufferGeometr
     fs[i].l = fs[i - 1].l + Math.hypot(fs[i].r - fs[i - 1].r, fs[i].z - fs[i - 1].z)
   }
   const lmax = fs[fs.length - 1].l
-  const uvratio = 0.4
+  const uvratio = 0.57
   const arcCoords: Point[][] = []
   for (let i = 1; i < N; i++) {
     const pf = fs[i - 1]
@@ -167,7 +167,7 @@ export function createJellyGeometryGrids(segments: number): (THREE.BufferGeometr
     const nf = fs[i + 1]
     const len = Math.min(nf.l - l, l - pf.l)
     const n = Math.max(Math.round(2 * Math.PI * r / len / 8), 1) * 8
-    const uvl = 1 - (l < lmax / 2 ? uvratio * 2 * l / lmax : uvratio + (1 - uvratio) * (2 * l / lmax - 1))
+    const uvl = 1 - (l < lmax / 2 ? (1 - uvratio) * 2 * l / lmax : (1 - uvratio) + uvratio * (2 * l / lmax - 1))
     const arc: Point[] = []
     for (let j = 0; j < n; j++) {
       const th = 2 * Math.PI * j / n
