@@ -6,7 +6,9 @@ import {
   length as vectorLength,
   scale as vectorScale,
   add as vectorAdd,
-  sub as vectorSub
+  sub as vectorSub,
+  dot as vectorDot,
+  normalize
 } from './math'
 import { Ribbon, String3D } from './string'
 
@@ -32,8 +34,8 @@ type Cell = {
 type StringRenderFunc = (string: String3D, ribbon: Ribbon) => void
 type AttachmentRenderFunc = (positions: Point3D[]) => void
 export class Jelly {
-  position: Point3D = { x: 0, y: 0, z: -2 }
-  rotation = Matrix3.fromRotation({ x: 3, y: 2, z: 1 }, 1)
+  position: Point3D = { x: 0, y: 0, z: 0 }
+  rotation = new Matrix3()
   velocity: Point3D = { x: 0, y: 0, z: 0 }
   momentum: Point3D = { x: 0, y: 0, z: 0 }
   coords: [JellyCoord[][],JellyCoord[][]] = [[], []]
@@ -61,17 +63,6 @@ export class Jelly {
         }
       }
     }
-    this.updateDestination(0)
-    for (let iz = 0; iz < 2; iz++) {
-      for (let ix = 0; ix <= segments; ix++) {
-        for (let iy = 0; iy <= segments; iy++) {
-          const { p, dst } = this.coords[iz][ix][iy]
-          p.x = dst.x
-          p.y = dst.y
-          p.z = dst.z
-        }
-      }
-    }
     const gridGeometries = createJellyGeometryGrids(segments)
     gridGeometries.forEach((geometries, i) => {
       return geometries.forEach((geometry, j) => {
@@ -91,6 +82,28 @@ export class Jelly {
         })
       })
     })
+    this.setPosition({ x: 0, y: 0, z: 0 })
+  }
+  setPosition(position: Point3D, direction: Point3D = { x: 0, y: 0, z: 1 }) {
+    this.position = position
+    const targetDir = normalize(direction)
+    const dir = { x: 0, y: 0, z: -1 }
+    const axis = cross(dir, targetDir)
+    const angle = Math.acos(vectorDot(dir, targetDir))
+    const randomRot = Matrix3.fromRotation({ x: 0, y: 0, z: 1 }, 2 * Math.PI * Math.random())
+    this.rotation = Matrix3.fromRotation(normalize(axis), angle).mult(randomRot)
+    const { segments } = this
+    this.updateDestination(0)
+    for (let iz = 0; iz < 2; iz++) {
+      for (let ix = 0; ix <= segments; ix++) {
+        for (let iy = 0; iy <= segments; iy++) {
+          const { p, dst } = this.coords[iz][ix][iy]
+          p.x = dst.x
+          p.y = dst.y
+          p.z = dst.z
+        }
+      }
+    }
   }
   updateMesh() {
     const { coords, segments } = this

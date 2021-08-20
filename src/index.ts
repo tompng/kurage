@@ -68,7 +68,7 @@ const touch = {
   lastActiveTime: 1 as null | number,
   start: { x: 0, y: 0 },
   end: { x: 0, y: 0 },
-  th: 0,
+  th: Math.PI,
   taps: [] as { x: number, y: number, time: number }[]
 }
 assignGlobal({ touch })
@@ -121,6 +121,7 @@ window.onpointerup = e => {
 }
 
 const jelly = new Jelly(6, texture)
+jelly.setPosition({ x: 0, y: 0, z: -2 }, { x: -1, y: 0, z: 0.1 })
 const oceanDust = new OceanDust(256)
 const oceanDark = new OceanDark()
 const oceanSurface = new OceanSurface()
