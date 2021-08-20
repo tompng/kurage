@@ -40,7 +40,7 @@ export class Jelly {
   strings: { pos: Point3D, dir: Point3D, string: String3D; render: StringRenderFunc; ribbon?: Ribbon }[] = []
   attachments: { positions: Point3D[]; render: AttachmentRenderFunc }[] = []
   cells: Cell[] = []
-
+  scene = new THREE.Scene()
   constructor(public segments: number, texture: THREE.Texture) {
     for (let iz = 0; iz < 2; iz++) {
       for (let ix = 0; ix <= segments; ix++) {
@@ -80,6 +80,7 @@ export class Jelly {
         material.uniforms.map.value = texture
         const mesh = new THREE.Mesh(geometry, material)
         mesh.frustumCulled = false
+        this.scene.add(mesh)
         this.cells.push({
           i,
           j,
@@ -90,12 +91,6 @@ export class Jelly {
         })
       })
     })
-  }
-  addToScene(scene: THREE.Scene) {
-    this.cells.forEach(cell => scene.add(cell.mesh))
-  }
-  removeFromScene(scene: THREE.Scene) {
-    this.cells.forEach(cell => scene.remove(cell.mesh))
   }
   updateMesh() {
     const { coords, segments } = this
@@ -405,7 +400,8 @@ export class Jelly {
     this.velocity = vectorAdd(this.velocity, vectorScale(f, dt))
     this.momentum = vectorAdd(this.momentum, vectorScale(cross(vectorSub(p, this.position), f), dt))
   }
-  renderStrings() {
+  render(renderer: THREE.WebGLRenderer, camera: THREE.Camera) {
+    renderer.render(this.scene, camera)
     this.attachments.forEach(({ positions, render }) => {
       render(positions.map(p => this.transformGridPoint(p)))
     })

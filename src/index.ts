@@ -132,6 +132,26 @@ function renderRibbon(string: String3D, ribbon: Ribbon) {
   ribbonRenderer.render(renderer, camera, string, ribbon)
 }
 
+const jellies: Jelly[] = []
+
+function addJelly() {
+  const jelly = new Jelly(3, texture)
+  for (let i = 0; i < 4; i++) {
+    const th = 2 * Math.PI * i / 4 + 1
+    const cos = Math.cos(th)
+    const sin = Math.sin(th)
+    jelly.addString(
+      { x: 0.3 * cos, y: 0.3 * sin, z: 1 },
+      { x: cos, y: sin, z: 10 },
+      new String3D(20, 2, 1, 1),
+      requestHanagasaString
+    )
+  }
+  jellies.push(jelly)
+}
+
+assignGlobal({ addJelly })
+
 for (let i = 0; i < 4; i++) {
   const th = 2 * Math.PI * i / 4 + 1
   const cos = Math.cos(th)
@@ -216,7 +236,9 @@ function frame() {
     jelly.momentum.y = jelly.momentum.y * 0.9 + rot.y * theta
     jelly.momentum.z = jelly.momentum.z * 0.9 + rot.z * theta
   }
-  jelly.update(performance.now() / 1000)
+  const t = performance.now() / 1000
+  jelly.update(t)
+  jellies.forEach(j => j.update(t))
   jelly.position.x = player.x
   jelly.position.y = 0
   jelly.position.z = player.z
@@ -232,9 +254,6 @@ const targetRenderScene = new THREE.Scene()
 const targetRenderCamera = new THREE.Camera()
 targetRenderMesh.scale.x = targetRenderMesh.scale.y = 2
 targetRenderScene.add(targetRenderMesh)
-
-const scene = new THREE.Scene()
-jelly.addToScene(scene)
 
 const clovers = [0, 1, 2, 3].map(i => {
   const th = Math.PI * i / 2
@@ -334,9 +353,9 @@ function render() {
   oceanDark.render(renderer, camera)
   oceanSurface.render(renderer, camera)
   oceanTerrain.render(renderer, camera)
-  jelly.renderStrings()
+  jelly.render(renderer, camera)
+  jellies.forEach(j => j.render(renderer, camera))
   stringRenderer.render(renderer, camera)
-  renderer.render(scene, camera)
   oceanDust.render(renderer, camera)
 
   renderer.setRenderTarget(null)
