@@ -31,7 +31,7 @@ type Cell = {
 
 type StringRenderFunc = (string: String3D, ribbon: Ribbon) => void
 type AttachmentRenderFunc = (positions: Point3D[]) => void
-export class JellyGrid {
+export class Jelly {
   position: Point3D = { x: 0, y: 0, z: -2 }
   rotation = Matrix3.fromRotation({ x: 3, y: 2, z: 1 }, 1)
   velocity: Point3D = { x: 0, y: 0, z: 0 }

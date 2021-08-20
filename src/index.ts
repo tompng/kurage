@@ -1,5 +1,5 @@
 import { Ribbon, String3D } from './string'
-import { JellyGrid } from './grid_jelly'
+import { Jelly } from './jelly'
 import * as THREE from 'three'
 import { Matrix3, Point3D, normalize, cross, dot, scale as vectorScale, add as vectorAdd, sub as vectorSub } from './math'
 import { BezierStringRenderer } from './string_mesh'
@@ -117,7 +117,7 @@ window.onpointerup = e => {
   touch.id = null
 }
 
-const jelly = new JellyGrid(6, texture)
+const jelly = new Jelly(6, texture)
 const oceanDust = new OceanDust(256)
 const oceanDark = new OceanDark()
 const oceanSurface = new OceanSurface()
