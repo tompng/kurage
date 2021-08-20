@@ -29,8 +29,8 @@ type Cell = {
   geometry: THREE.BufferGeometry
 }
 
-type StringRenderFunc = ((string: String3D) => void) | ((string: String3D, ribbon: Ribbon) => void)
-
+type StringRenderFunc = (string: String3D, ribbon: Ribbon) => void
+type AttachmentRenderFunc = (positions: Point3D[]) => void
 export class JellyGrid {
   position: Point3D = { x: 0, y: 0, z: -2 }
   rotation = Matrix3.fromRotation({ x: 3, y: 2, z: 1 }, 1)
@@ -38,6 +38,7 @@ export class JellyGrid {
   momentum: Point3D = { x: 0, y: 0, z: 0 }
   coords: [JellyCoord[][],JellyCoord[][]] = [[], []]
   strings: { pos: Point3D, dir: Point3D, string: String3D; render: StringRenderFunc; ribbon?: Ribbon }[] = []
+  attachments: { positions: Point3D[]; render: AttachmentRenderFunc }[] = []
   cells: Cell[] = []
 
   constructor(public segments: number, texture: THREE.Texture) {
@@ -175,6 +176,9 @@ export class JellyGrid {
       set(uniforms.vz110, vz11)
       set(uniforms.vz111, vz11)
     })
+  }
+  addAttachment(positions: Point3D[], render: AttachmentRenderFunc) {
+    this.attachments.push({ positions, render })
   }
   addString(pos: Point3D, dir: Point3D, string: String3D, render: StringRenderFunc, hasRibbon = false) {
     const ribbon = hasRibbon ? new Ribbon(string.numSegments) : undefined
@@ -402,6 +406,9 @@ export class JellyGrid {
     this.momentum = vectorAdd(this.momentum, vectorScale(cross(vectorSub(p, this.position), f), dt))
   }
   renderStrings() {
-    this.strings.forEach(({ string, ribbon, render }) => (render as (s: String3D, r: Ribbon | undefined) => void)(string, ribbon))
+    this.attachments.forEach(({ positions, render }) => {
+      render(positions.map(p => this.transformGridPoint(p)))
+    })
+    this.strings.forEach(({ string, ribbon, render }) => render(string, ribbon!))
   }
 }

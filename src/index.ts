@@ -243,7 +243,7 @@ const clovers = [0, 1, 2, 3].map(i => {
     const t = (2 * i / 10 - 1) * 3
     const x = 0.2 + 0.12 * Math.cos(t) + rand(0.01)
     const y = 0.12 * Math.sin(t) + rand(0.01)
-    const z = 0.8+ rand(0.015)
+    const z = 0.6 + rand(0.015) + x * x / 4
     line.push({
       x: x * cos - y * sin,
       y: x * sin + y * cos,
@@ -251,6 +251,29 @@ const clovers = [0, 1, 2, 3].map(i => {
     })
   }
   return line
+})
+
+function renderCloverAttachment(positions: Point3D[]) {
+  stringRenderer.request(
+    0.03,
+    0xff8844,
+    [...new Array(positions.length - 3)].map((_, i) => {
+      const a = positions[i]
+      const b = positions[i + 1]
+      const c = positions[i + 2]
+      const d = positions[i + 3]
+      return [
+        b,
+        vectorAdd(b, vectorScale(vectorSub(c, a), 1 / 6)),
+        vectorAdd(c, vectorScale(vectorSub(d, b), -1 / 6)),
+        c
+      ]
+    }),
+  )
+}
+
+clovers.forEach(positions => {
+  jelly.addAttachment(positions, renderCloverAttachment)
 })
 
 class SmoothPoint3D {
@@ -304,26 +327,6 @@ function render() {
   camera.up.set(0, 0, 1)
   camera.position.set(centerPosition.x, centerPosition.y - 8, centerPosition.z)
   camera.lookAt(centerPosition.x, centerPosition.y, centerPosition.z)
-
-  clovers.forEach(line => {
-    const gline = line.map(p => jelly.transformGridPoint(p))
-    stringRenderer.request(
-      0.03,
-      0x444444,
-      [...new Array(gline.length - 3)].map((_, i) => {
-        const a = gline[i]
-        const b = gline[i + 1]
-        const c = gline[i + 2]
-        const d = gline[i + 3]
-        return [
-          b,
-          vectorAdd(b, vectorScale(vectorSub(c, a), 1 / 6)),
-          vectorAdd(c, vectorScale(vectorSub(d, b), -1 / 6)),
-          c
-        ]
-      }),
-    )
-  })
 
   const uiBrightness = touch.lastActiveTime ? 1 - (new Date().getTime() - touch.lastActiveTime) / 300 : 1
   uiCtx.clearRect(0, 0, uiCanvas.width, uiCanvas.height)
