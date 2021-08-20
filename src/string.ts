@@ -157,13 +157,6 @@ export class String3D {
     })
     return output
   }
-  renderToCanvas(ctx: CanvasRenderingContext2D) {
-    const [startPoint, ...restPoints] = this.points
-    ctx.beginPath()
-    ctx.moveTo(startPoint.x, startPoint.z)
-    restPoints.forEach(({ x, z }) => ctx.lineTo(x, z))
-    ctx.stroke()
-  }
   bezierSegments(): BezierSegment[] {
     const { points, numSegments } = this
     return [...new Array(numSegments)].map((_, i) => {

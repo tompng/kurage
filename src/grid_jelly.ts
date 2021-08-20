@@ -401,65 +401,6 @@ export class JellyGrid {
     this.velocity = vectorAdd(this.velocity, vectorScale(f, dt))
     this.momentum = vectorAdd(this.momentum, vectorScale(cross(vectorSub(p, this.position), f), dt))
   }
-  renderDebug(ctx: CanvasRenderingContext2D) {
-    ctx.save()
-    const bodyCoords: Point3D[] = []
-    for (let i = 0; i < 8; i++) bodyCoords.push({ x: (i & 1) * 2 - 1, y: ((i >> 1) & 1) * 2 - 1, z: ((i >> 2) & 1) * 2 - 1 })
-    ctx.beginPath()
-    bodyCoords.forEach(p => {
-      bodyCoords.forEach(q => {
-        if (distance(p, q) !== 2) return
-        const tp = this.transformLocalPoint(vectorScale(p, 0.5))
-        const tq = this.transformLocalPoint(vectorScale(q, 0.5))
-        ctx.moveTo(tp.x, tp.z)
-        ctx.lineTo(tq.x, tq.z)
-      })
-    })
-    ctx.strokeStyle = 'gray'
-    ctx.stroke()
-    ctx.beginPath()
-    const { segments, coords } = this
-    function draw(a: JellyCoord, b: JellyCoord) {
-      ctx.moveTo(a.p.x, a.p.z)
-      ctx.lineTo(b.p.x, b.p.z)
-    }
-    for (let iz = 0; iz < 2; iz++) {
-      for (let ix = 0; ix <= segments; ix++) {
-        for (let iy = 0; iy <= segments; iy++) {
-          const c = coords[iz][ix][iy]
-          if (iz == 0) draw(c, coords[iz + 1][ix][iy])
-          if (ix != 0) draw(c, coords[iz][ix - 1][iy])
-          if (iy != 0) draw(c, coords[iz][ix][iy - 1])
-        }
-      }
-    }
-    ctx.strokeStyle = 'black'
-    ctx.stroke()
-    ctx.restore()
-  }
-  renderToCanvas(ctx: CanvasRenderingContext2D) {
-    ctx.save()
-    ctx.scale(0.2, 0.2)
-    ctx.lineCap = ctx.lineJoin = 'round'
-    this.renderDebug(ctx)
-    ctx.beginPath()
-    ctx.lineWidth *= 8
-    for (let r = 1; r > 0.05; r-=0.1) {
-      const n = Math.round(r * 64)
-      const p = this.transformGridPoint({ x: r, y: 0, z: 0 })
-      ctx.moveTo(p.x, p.z)
-      for (let i = 0; i <= n; i++) {
-        const th = 2 * Math.PI * i / n
-        const p = this.transformGridPoint({ x: r * Math.cos(th), y: r * Math.sin(th), z: (1 - (1 - r*r) ** 0.5) })
-        i === 0 ? ctx.moveTo(p.x, p.z) : ctx.lineTo(p.x, p.z)
-      }
-    }
-    ctx.strokeStyle = 'blue'
-    ctx.stroke()
-    ctx.strokeStyle = 'red'
-    this.strings.forEach(({ string }) => string.renderToCanvas(ctx))
-    ctx.restore()
-  }
   renderStrings() {
     this.strings.forEach(({ string, ribbon, render }) => (render as (s: String3D, r: Ribbon | undefined) => void)(string, ribbon))
   }
