@@ -1,7 +1,7 @@
 import { Ribbon, String3D } from './string'
 import { Jelly } from './jelly'
 import * as THREE from 'three'
-import { Matrix3, Point3D, normalize, cross, dot, scale as vectorScale, add as vectorAdd, sub as vectorSub } from './math'
+import { Point3D, normalize, cross, dot, scale as vectorScale, add as vectorAdd, sub as vectorSub } from './math'
 import { BezierStringRenderer } from './string_mesh'
 import { RibbonRenderer } from './ribbon_mesh'
 import { OceanDust, OceanDark, OceanSurface, OceanTerrain } from './ocean'
@@ -25,6 +25,7 @@ function assignGlobal(data: Record<string, any>) {
   for (const i in data) (window as any)[i] = data[i]
 }
 const renderer = new THREE.WebGLRenderer()
+const shortFov = 30
 const target = new THREE.WebGLRenderTarget(16, 16, {
   minFilter: THREE.NearestFilter,
   magFilter: THREE.NearestFilter,
@@ -41,11 +42,11 @@ function setSize(){
   const aspect = Math.max(minAspect, Math.min(innerWidth / innerHeight, innerHeight / innerWidth, maxAspect))
   let width: number, height: number, fov: number
   if (innerWidth > innerHeight) {
-    fov = 180 * Math.atan(aspect) / Math.PI
+    fov = shortFov
     width = (innerWidth * aspect < innerHeight) ? innerWidth : innerHeight / aspect
     height = width * aspect
   } else {
-    fov = 45
+    fov = 2 * Math.atan(Math.tan(Math.PI * shortFov / 180 / 2) / aspect) * 180 / Math.PI
     height = (innerHeight * aspect < innerWidth) ? innerHeight : innerWidth / aspect
     width = height * aspect
   }
@@ -79,7 +80,9 @@ const player = {
   dstTheta: Math.PI
 }
 function getTouchPoint(e: PointerEvent) {
-  const size = Math.min(innerWidth, innerHeight)
+  const w = renderer.domElement.offsetWidth
+  const h = renderer.domElement.offsetHeight
+  const size = Math.min(w, h)
   return {
     x: (2 * e.pageX - innerWidth) / size,
     y: (innerHeight - 2 * e.pageY) / size
@@ -98,6 +101,12 @@ window.onpointerdown = e => {
     touch.end = p
     touch.lastActiveTime = null
   } else {
+    const gy = 0
+    const scale = Math.tan(shortFov * Math.PI / 180 / 2)
+    const gx = camera.position.x + (gy - camera.position.y) * p.x * scale
+    const gz = camera.position.z + (gy - camera.position.y) * p.y * scale
+    addJelly(gx, gz)
+    console.log(gz, camera.position.z, p.y, camera.fov)
     touch.taps.push({ ...p, time: new Date().getTime() })
   }
 }
@@ -135,8 +144,9 @@ function renderRibbon(string: String3D, ribbon: Ribbon) {
 
 const jellies: Jelly[] = []
 
-function addJelly() {
+function addJelly(x: number, z: number) {
   const jelly = new Jelly(3, texture)
+  jelly.setPosition({ x, y: 0, z })
   for (let i = 0; i < 4; i++) {
     const th = 2 * Math.PI * i / 4 + 1
     const cos = Math.cos(th)
@@ -149,9 +159,10 @@ function addJelly() {
     )
   }
   jellies.push(jelly)
+  if (jellies.length > 2) jellies.shift()?.dispose()
 }
 
-assignGlobal({ addJelly })
+assignGlobal({ addJelly, jellies })
 
 for (let i = 0; i < 4; i++) {
   const th = 2 * Math.PI * i / 4 + 1
@@ -419,7 +430,6 @@ function renderUI() {
     uiCtx.globalAlpha = 0.5 * (1 - t)
     uiCtx.fillStyle = 'white'
     uiCtx.fill()
-    console.log(x, y, time)
   })
   uiCtx.restore()
 }

@@ -8,7 +8,8 @@ import {
   add as vectorAdd,
   sub as vectorSub,
   dot as vectorDot,
-  normalize
+  normalize,
+  randomDirection
 } from './math'
 import { Ribbon, String3D } from './string'
 
@@ -82,9 +83,9 @@ export class Jelly {
         })
       })
     })
-    this.setPosition({ x: 0, y: 0, z: 0 })
+    this.setPosition({ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 1 })
   }
-  setPosition(position: Point3D, direction: Point3D = { x: 0, y: 0, z: 1 }) {
+  setPosition(position: Point3D, direction = randomDirection()) {
     this.position = position
     const targetDir = normalize(direction)
     const dir = { x: 0, y: 0, z: -1 }
@@ -419,5 +420,11 @@ export class Jelly {
       render(positions.map(p => this.transformGridPoint(p)))
     })
     this.strings.forEach(({ string, ribbon, render }) => render(string, ribbon!))
+  }
+  dispose() {
+    this.cells.forEach(cell => {
+      cell.geometry.dispose()
+      cell.material.dispose()
+    })
   }
 }
