@@ -68,7 +68,8 @@ const touch = {
   lastActiveTime: 1 as null | number,
   start: { x: 0, y: 0 },
   end: { x: 0, y: 0 },
-  th: 0
+  th: 0,
+  taps: [] as { x: number, y: number, time: number }[]
 }
 assignGlobal({ touch })
 const player = {
@@ -96,6 +97,8 @@ window.onpointerdown = e => {
     touch.start = p
     touch.end = p
     touch.lastActiveTime = null
+  } else {
+    touch.taps.push({ ...p, time: new Date().getTime() })
   }
 }
 window.onpointermove = e => {
@@ -328,12 +331,28 @@ function render() {
   camera.position.set(centerPosition.x, centerPosition.y - 8, centerPosition.z)
   camera.lookAt(centerPosition.x, centerPosition.y, centerPosition.z)
 
-  const uiBrightness = touch.lastActiveTime ? 1 - (new Date().getTime() - touch.lastActiveTime) / 300 : 1
+  oceanDark.render(renderer, camera)
+  oceanSurface.render(renderer, camera)
+  oceanTerrain.render(renderer, camera)
+  jelly.renderStrings()
+  stringRenderer.render(renderer, camera)
+  renderer.render(scene, camera)
+  oceanDust.render(renderer, camera)
+
+  renderer.setRenderTarget(null)
+  renderer.render(targetRenderScene, targetRenderCamera)
+  renderUI()
+}
+
+function renderUI() {
+  const currnetTime = new Date().getTime()
+  const uiBrightness = touch.lastActiveTime ? 1 - (currnetTime - touch.lastActiveTime) / 300 : 1
   uiCtx.clearRect(0, 0, uiCanvas.width, uiCanvas.height)
   uiCtx.save()
   uiCtx.translate(uiCanvas.width / 2, uiCanvas.height / 2)
   const minWH = Math.min(uiCanvas.width, uiCanvas.height)
   uiCtx.scale(minWH / 2, -minWH / 2)
+  uiCtx.save()
   uiCtx.rotate(touch.th)
   uiCtx.lineCap = uiCtx.lineJoin = 'round'
   uiCtx.strokeStyle = '#eef'
@@ -372,15 +391,15 @@ function render() {
   }
   uiCtx.restore()
 
-  oceanDark.render(renderer, camera)
-  oceanSurface.render(renderer, camera)
-  oceanTerrain.render(renderer, camera)
-  jelly.renderStrings()
-  stringRenderer.render(renderer, camera)
-  const center = jelly.transformGridPoint({ x: 0, y: 0, z: 0 })
-  renderer.render(scene, camera)
-  oceanDust.render(renderer, camera)
-
-  renderer.setRenderTarget(null)
-  renderer.render(targetRenderScene, targetRenderCamera)
+  while(touch.taps.length !== 0 && touch.taps[0].time + 300 < currnetTime) touch.taps.shift()
+  touch.taps.forEach(({ x, y, time }) => {
+    const t = (currnetTime - time) / 300
+    uiCtx.beginPath()
+    uiCtx.arc(x, y, 0.1 * (t + 0.01), 0, 2 * Math.PI)
+    uiCtx.globalAlpha = 0.5 * (1 - t)
+    uiCtx.fillStyle = 'white'
+    uiCtx.fill()
+    console.log(x, y, time)
+  })
+  uiCtx.restore()
 }
