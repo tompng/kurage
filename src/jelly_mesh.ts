@@ -133,7 +133,7 @@ export function createJellyGeometryGrids(segments: number): (THREE.BufferGeometr
   const f = (th: number) => {
     const r = Math.sin(th)
     const z = Math.cos(th)
-    return { r, z: z < 0 ? z : z * r ** 32 }
+    return { r, z: z < 0 ? z : z * r ** 8 }
   }
   const fs = [...new Array(N + 1)].map((_, i) => {
     const th = Math.PI * i / N
