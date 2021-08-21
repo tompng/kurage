@@ -34,13 +34,26 @@ type Cell = {
 
 type StringRenderFunc = (string: String3D, ribbon: Ribbon) => void
 type AttachmentRenderFunc = (positions: Point3D[]) => void
+
+type Connectivity = {
+  pos: Point3D
+  dir: Point3D
+  n: number
+  f: number
+}
+
+type StringInfo = Connectivity & {
+  string: String3D
+  render: StringRenderFunc
+  ribbon?: Ribbon
+}
 export class Jelly {
   position: Point3D = { x: 0, y: 0, z: 0 }
   rotation = new Matrix3()
   velocity: Point3D = { x: 0, y: 0, z: 0 }
   momentum: Point3D = { x: 0, y: 0, z: 0 }
   coords: [JellyCoord[][],JellyCoord[][]] = [[], []]
-  strings: { pos: Point3D, dir: Point3D, string: String3D; render: StringRenderFunc; ribbon?: Ribbon }[] = []
+  strings: StringInfo[] = []
   attachments: { positions: Point3D[]; render: AttachmentRenderFunc }[] = []
   cells: Cell[] = []
   scene = new THREE.Scene()
@@ -189,15 +202,15 @@ export class Jelly {
   addAttachment(positions: Point3D[], render: AttachmentRenderFunc) {
     this.attachments.push({ positions, render })
   }
-  addString(pos: Point3D, dir: Point3D, string: String3D, render: StringRenderFunc, hasRibbon = false) {
+  addString(conn: Connectivity, string: String3D, render: StringRenderFunc, hasRibbon = false) {
     const ribbon = hasRibbon ? new Ribbon(string.numSegments) : undefined
-    this.strings.push({ pos, dir, string, render, ribbon })
+    this.strings.push({ ...conn, string, render, ribbon })
     string.directions
-    const gpos = this.transformGridPoint(pos)
+    const gpos = this.transformGridPoint(conn.pos)
     string.points[0].x = gpos.x
     string.points[0].y = gpos.y
     string.points[0].z = gpos.z
-    const gpos2 = this.transformGridPoint(vectorAdd(pos, vectorScale(dir, 0.01)))
+    const gpos2 = this.transformGridPoint(vectorAdd(conn.pos, vectorScale(conn.dir, 0.01)))
     const d = vectorNormalize(vectorSub(gpos2, gpos))
     string.directions.forEach(dir => {
       dir.x = d.x
@@ -364,26 +377,24 @@ export class Jelly {
         }
       }
     }
-    this.strings.forEach(({ pos, dir, string, ribbon }) => {
-      string.F.forEach(f => { f.z += 0.0002 })
-      const n = Math.min(Math.ceil(0.1 / string.segmentLength), string.numSegments)
+    this.strings.forEach(({ pos, dir, string, ribbon, n, f }) => {
       const firstPos = this.transformGridPoint(pos)
       const gdir = vectorNormalize(vectorSub(this.transformGridPoint(vectorAdd(pos, vectorScale(dir, 0.01))), firstPos))
       for (let i = 0; i < n; i++) {
         const p = string.points[i]
-        const t = i / n * 10
-        const f = {
+        const t = (1 - i / n) * f
+        const fxyz = {
           x: t * (firstPos.x + i * string.segmentLength * gdir.x - p.x),
           y: t * (firstPos.y + i * string.segmentLength * gdir.y - p.y),
           z: t * (firstPos.z + i * string.segmentLength * gdir.z - p.z)
         }
-        string.F[i].x += f.x
-        string.F[i].y += f.y
-        string.F[i].z += f.z
-        this.pull(p, f, -dt)
+        string.F[i].x += fxyz.x
+        string.F[i].y += fxyz.y
+        string.F[i].z += fxyz.z
+        this.pull(p, fxyz, -dt)
       }
-      const f = string.update(dt, { first: firstPos })
-      this.addGridForce(pos, f.first, -dt)
+      const f0 = string.update(dt, { first: firstPos })
+      this.addGridForce(pos, f0.first, -dt)
       if (ribbon) {
         const ribbonDir = vectorSub(this.transformGridPoint({ x: 0, y: 0, z: pos.z }), this.transformGridPoint(pos))
         ribbon.update(ribbonDir, string.directions, Math.max(5 * dt, 1))

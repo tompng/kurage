@@ -12,7 +12,7 @@ export class String3D {
   friction = 0.5
   hardness = 4
   decay = 4
-  constructor(public numSegments: number, public length: number, public startPointWeight: number, weight: number) {
+  constructor(public numSegments: number, public length: number, weight: number) {
     this.segmentLength = length / numSegments
     const { directions, velocities, F, weights } = this
     for (let i = 0; i < numSegments; i++) {

@@ -152,9 +152,13 @@ function addJelly(x: number, z: number) {
     const cos = Math.cos(th)
     const sin = Math.sin(th)
     jelly.addString(
-      { x: 0.3 * cos, y: 0.3 * sin, z: 1 },
-      { x: cos, y: sin, z: 10 },
-      new String3D(20, 2, 1, 1),
+      {
+        pos: { x: 0.3 * cos, y: 0.3 * sin, z: 1 },
+        dir: { x: cos, y: sin, z: 10 },
+        n: 2,
+        f: 10
+      },
+      new String3D(20, 2, 1),
       requestHanagasaString
     )
   }
@@ -169,9 +173,13 @@ for (let i = 0; i < 4; i++) {
   const cos = Math.cos(th)
   const sin = Math.sin(th)
   jelly.addString(
-    { x: 0.3 * cos, y: 0.3 * sin, z: 1 },
-    { x: cos, y: sin, z: 10 },
-    new String3D(ribbonSegments, 2, 1, 1),
+    {
+      pos: { x: 0.3 * cos, y: 0.3 * sin, z: 1 },
+      dir: { x: cos, y: sin, z: 10 },
+      n: 4,
+      f: 10
+    },
+    new String3D(ribbonSegments, 2, 1),
     renderRibbon,
     true
   )
@@ -181,9 +189,13 @@ for (let i = 0; i < 8; i++) {
   const cos = Math.cos(th)
   const sin = Math.sin(th)
   jelly.addString(
-    { x: 0.98 * cos, y: 0.98 * sin, z: 0.9 },
-    { x: cos, y: sin, z: 4 },
-    new String3D(100, 2 + 0.5 * Math.random(), 1, 1),
+    {
+      pos: { x: 0.98 * cos, y: 0.98 * sin, z: 0.9 },
+      dir: { x: cos, y: sin, z: 4 },
+      n: 10,
+      f: 10
+    },
+    new String3D(100, 2 + 0.5 * Math.random(), 1),
     requestWhiteBlueString
   )
 }
@@ -193,9 +205,13 @@ for (let i = 0; i < 128; i++) {
   const cos = Math.cos(th)
   const sin = Math.sin(th)
   jelly.addString(
-    { x: cos, y: sin, z: 1 },
-    { x: cos, y: sin, z: 4 },
-    new String3D(5, 0.2 + 0.1 * Math.random(), 1, 0.1),
+    {
+      pos: { x: cos, y: sin, z: 1 },
+      dir: { x: cos, y: sin, z: 4 },
+      n: 4,
+      f: 10
+    },
+    new String3D(5, 0.2 + 0.1 * Math.random(), 0.1),
     requestThinString
   )
 }
@@ -211,11 +227,18 @@ for (let i = 0; i < 64; i++) {
   const rth = Math.PI / 2 * Math.sqrt(Math.random())
   const r = Math.sin(rth)
   let z = Math.cos(rth)
+  function render(string: String3D) {
+    stringRenderer.varyingRequest(0.015, string.bezierSegmentsWithColor(0xBBBBFF, 0xFF0000))
+  }
   jelly.addString(
-    { x: r * cos, y: r * sin, z: 1 - z },
-    { x: 0, y: 0, z: -1 },
-    new String3D(10, 0.15, 1, 0.1),
-    requestHanagasaString
+    {
+      pos: { x: r * cos, y: r * sin, z: 1 - z },
+      dir: { x: 0, y: 0, z: -1 },
+      n: 4,
+      f: 10
+    },
+    new String3D(10, 0.15, 0.1),
+    render
   )
 }
 
