@@ -220,7 +220,8 @@ export class Jelly {
     string.calcPoints()
   }
   jellyDestination(l: number, th: number, time: number, z: number) {
-    const f = ((1 + Math.sin(time - l + Math.sin(th) * 0.5)) / 2) ** 2
+    const f = (1 + Math.sin(1.5 * time - l + Math.sin(th) / 2)) / 2
+    const z0 = Math.sin(1.5 * time - 1) / 16
     const rmin = 0.7
     const rmax = 1.6
     const rlen = rmax + (rmin - rmax) * f
@@ -228,7 +229,7 @@ export class Jelly {
     return {
       x: r * Math.cos(th),
       y: r * Math.sin(th),
-      z: rlen - (rlen + z) * Math.cos(l / rlen) - 0.25
+      z: rlen - (rlen + z) * Math.cos(l / rlen) - 0.25 - z0
     }
   }
   updateDestination(time: number) {
@@ -323,8 +324,9 @@ export class Jelly {
       const dx = b.p.x - a.p.x
       const dy = b.p.y - a.p.y
       const dz = b.p.z - a.p.z
-      const r = Math.hypot(dx, dy, dz)
-      const f = (1 - dist / r) * 16
+      const r = Math.hypot(dx, dy, dz) || 1
+      const dotv = ((b.v.x - a.v.x) * dx + (b.v.y - a.v.y) * dy + (b.v.z - a.v.z) * dz) / r
+      const f = ((r - dist) * 16 + 8 * dotv) / r
       a.f.x += f * dx
       a.f.y += f * dy
       a.f.z += f * dz
