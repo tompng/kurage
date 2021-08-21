@@ -58,17 +58,17 @@ export class Jelly {
   cells: Cell[] = []
   scene = new THREE.Scene()
   constructor(public segments: number, texture: THREE.Texture) {
-    for (let iz = 0; iz < 2; iz++) {
+    const zscale = 1 / 3
+    for (let iz = 0; iz <= 1; iz++) {
       for (let ix = 0; ix <= segments; ix++) {
         this.coords[iz][ix]=[]
         const x = 2.0 * ix / segments - 1
         for (let iy = 0; iy <= segments; iy++) {
           const y = 2.0 * iy / segments - 1
-          const r = Math.hypot(x, y)
           this.coords[iz][ix][iy] = {
             r: Math.hypot(x, y),
             th: Math.atan2(y, x),
-            z: -2 * iz / segments,
+            z: (0.5 - iz) * zscale,
             dst: { x: 0, y: 0, z: 0 },
             p: { x: 0, y: 0, z: 0 },
             v: { x: 0, y: 0, z: 0 },
@@ -221,8 +221,8 @@ export class Jelly {
   }
   jellyDestination(l: number, th: number, time: number, z: number) {
     const f = ((1 + Math.sin(time - l + Math.sin(th) * 0.5)) / 2) ** 2
-    const rmin = 0.8
-    const rmax = 2
+    const rmin = 0.7
+    const rmax = 1.6
     const rlen = rmax + (rmin - rmax) * f
     const r = (rlen + z) * Math.sin(l / rlen)
     return {
