@@ -1,7 +1,8 @@
 import { Point3D, dot, solveTridiagonal, cross, weightedSum, normalize, add, sub } from './math'
 
 export type BezierSegment = [Point3D, Point3D, Point3D, Point3D]
-export type BezierSegmentWithColor = [Point3D, Point3D, Point3D, Point3D, number, number]
+type Color = { r: number, g: number, b: number }
+export type BezierSegmentWithColor = [Point3D, Point3D, Point3D, Point3D, Color, Color]
 export class String3D {
   segmentLength: number
   directions: Point3D[] = []
@@ -182,18 +183,17 @@ export class String3D {
       ]
     })
   }
-  bezierSegmentsWithColor(c1: number, c2: number) {
-    const r0 = (c1 >> 16) & 0xff
-    const g0 = (c1 >> 8) & 0xff
-    const b0 = c1 & 0xff
-    const dr = ((c2 >> 16) & 0xff) - r0
-    const dg = ((c2 >> 8) & 0xff) - g0
-    const db = (c2 & 0xff) - b0
+  bezierSegmentsWithColor(c1: Color, c2: Color) {
+    const { r: r1, g: g1, b: b1 } = c1
+    const { r: r2, g: g2, b: b2 } = c2
+    const dr = r2 - r1
+    const dg = g2 - g1
+    const db = b2 - b1
     const segments = this.bezierSegments() as unknown as BezierSegmentWithColor[]
     const n = segments.length
     for (let i = 1; i < n; i++) {
       const t = i / n
-      const c = (Math.round(r0 + dr * t) << 16) | (Math.round(g0 + dg * t) << 8) | Math.round(b0 + db * t)
+      const c = { r: r1 + dr * t, g: g1 + dg * t, b: b1 + db * t }
       segments[i - 1][5] = segments[i][4] = c
     }
     segments[0][4] = c1

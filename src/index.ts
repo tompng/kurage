@@ -147,6 +147,9 @@ const jellies: Jelly[] = []
 function addJelly(x: number, z: number) {
   const jelly = new Jelly(3, texture)
   jelly.setPosition({ x, y: 0, z })
+  function renderString(string: String3D) {
+    stringRenderer.varyingRequest(0.015, string.bezierSegmentsWithColor({ r: 4, g: 0, b: 0 }, { r: 3, g: 3, b: 4 }))
+  }
   for (let i = 0; i < 4; i++) {
     const th = 2 * Math.PI * i / 4 + 1
     const cos = Math.cos(th)
@@ -159,7 +162,7 @@ function addJelly(x: number, z: number) {
         f: 10
       },
       new String3D(20, 2, 1),
-      requestHanagasaString
+      renderString
     )
   }
   jellies.push(jelly)
@@ -218,7 +221,7 @@ for (let i = 0; i < 128; i++) {
 
 
 function requestHanagasaString(string: String3D) {
-  stringRenderer.varyingRequest(0.015, string.bezierSegmentsWithColor(0x666688, 0x880000))
+  stringRenderer.varyingRequest(0.015, string.bezierSegmentsWithColor({ r: 0.4, g: 0.5, b: 0.5 }, { r: 0.6, g: 0, b: 0 }))
 }
 for (let i = 0; i < 64; i++) {
   const th = 2 * Math.PI * i / 64
@@ -227,9 +230,6 @@ for (let i = 0; i < 64; i++) {
   const rth = Math.PI / 2 * Math.sqrt(Math.random())
   const r = Math.sin(rth)
   let z = Math.cos(rth)
-  function render(string: String3D) {
-    stringRenderer.varyingRequest(0.015, string.bezierSegmentsWithColor(0xBBBBFF, 0xFF0000))
-  }
   jelly.addString(
     {
       pos: { x: r * cos, y: r * sin, z: 1 - z },
@@ -238,7 +238,7 @@ for (let i = 0; i < 64; i++) {
       f: 10
     },
     new String3D(10, 0.15, 0.1),
-    render
+    requestHanagasaString
   )
 }
 
