@@ -245,16 +245,25 @@ for (let i = 0; i < 64; i++) {
 assignGlobal({ player })
 const oceanDepth = -16
 function frame() {
+  let dt = 0.01
+  const { stopAt, startAt } = window as any
+  if (startAt) {
+    dt = Math.min((performance.now() - startAt) / 1000, 1) * 0.01
+  } else if (stopAt) {
+    dt = Math.max(1 - (performance.now() - stopAt) / 1000, 0) * 0.01
+  }
+  oceanSurface.update(dt)
+  centerPosition.update(jelly.position, dt)
   const currentDir = normalize(vectorSub(jelly.transformLocalPoint({ x: 0, y: 0, z: -1 }), jelly.position))
   const targetDir = normalize({ x: Math.cos(player.th), y: 0, z: Math.sin(player.th) })
   const rot = normalize(cross(currentDir, targetDir))
   const d = Math.sqrt(1 - Math.cos(player.dstTheta - player.th)) * (Math.sin(player.dstTheta - player.th) > 0 ? 1 : -1)
-  player.vx = player.vx * 0.4 + (currentDir.x + Math.cos(player.dstTheta)) * 0.01
-  player.vz = player.vz * 0.4 + (currentDir.z + Math.sin(player.dstTheta)) * 0.01
+  player.vx += -player.vx * 8 * dt + 2 * (currentDir.x + Math.cos(player.dstTheta)) * dt
+  player.vz += -player.vz * 8 * dt + 2 * (currentDir.z + Math.sin(player.dstTheta)) * dt
   const vdot = Math.cos(player.th) * player.vx + Math.sin(player.th) * player.vz
-  player.th += d * (0.002 + Math.min(Math.max(0, vdot), 0.006))
-  player.x += player.vx * 0.1
-  player.z += player.vz * 0.1
+  player.th += d * (0.2 + Math.min(Math.max(0, 100 * vdot), 0.6)) * dt
+  player.x += player.vx * dt
+  player.z += player.vz * dt
   player.z = Math.min(Math.max(player.z, oceanDepth + 1), -1)
 
   jelly.velocity.x = player.vx
@@ -271,7 +280,6 @@ function frame() {
     jelly.momentum.y = jelly.momentum.y * 0.9 + rot.y * theta
     jelly.momentum.z = jelly.momentum.z * 0.9 + rot.z * theta
   }
-  const dt = 0.01
   jelly.update(dt)
   jellies.forEach(j => j.update(dt))
   jelly.position.x = player.x
@@ -338,33 +346,35 @@ class SmoothPoint3D {
   v2: Point3D = { x: 0, y: 0, z: 0 }
   v3: Point3D = { x: 0, y: 0, z: 0 }
   vscale: number
-  exponent: number
   x = 0
   y = 0
   z = 0
-  constructor(position: Point3D, stepScale: number) {
-    const e = Math.exp(-1 / stepScale)
-    this.exponent = e
-    this.vscale = 1 / (1 / (1 - e) - 2 / (1 - e**2) + 1 / (1 - e**3))
+  constructor(position: Point3D, public timeScale: number) {
+    const e = Math.exp(-1 / timeScale)
+    this.vscale = 1 / (timeScale * (1 / 1 - 2 / 2 + 1 / 3))
     this.reset(position)
   }
-  update({ x, y, z }: Point3D) {
-    const { v1, v2, v3, vscale, exponent: e } = this
-    for (const [v, ex] of [[v1, e], [v2, e**2], [v3, e**3]] as const) {
-      v.x = v.x * ex + x
-      v.y = v.y * ex + y
-      v.z = v.z * ex + z
+  update({ x, y, z }: Point3D, dt: number) {
+    const { timeScale } = this
+    const { v1, v2, v3, vscale } = this
+    for (const [v, n] of [[v1, 1], [v2, 2], [v3, 3]] as const) {
+      const e = Math.exp(-n / timeScale * dt)
+      const c = timeScale / n * (1 - e)
+      v.x = v.x * e + c * x
+      v.y = v.y * e + c * y
+      v.z = v.z * e + c * z
     }
     this.x = (v1.x - 2 * v2.x + v3.x) * vscale
     this.y = (v1.y - 2 * v2.y + v3.y) * vscale
     this.z = (v1.z - 2 * v2.z + v3.z) * vscale
   }
   reset({ x, y, z }: Point3D) {
-    const { v1, v2, v3, exponent: e } = this
-    for (const [v, ex] of [[v1, e], [v2, e**2], [v3, e**3]] as const) {
-      v.x = x / (1 - ex)
-      v.y = y / (1 - ex)
-      v.z = z / (1 - ex)
+    const { v1, v2, v3, timeScale } = this
+    for (const [v, n] of [[v1, 1], [v2, 2], [v3, 3]] as const) {
+      const s = timeScale / n
+      v.x = x * s
+      v.y = y * s
+      v.z = z * s
     }
     this.x = x
     this.y = y
@@ -373,14 +383,13 @@ class SmoothPoint3D {
 }
 
 
-const centerPosition = new SmoothPoint3D(jelly.position, 60)
+const centerPosition = new SmoothPoint3D(jelly.position, 0.5)
 
 function render() {
   renderer.setRenderTarget(target)
   renderer.autoClear = false
   renderer.clearColor()
   renderer.clearDepth()
-  centerPosition.update(jelly.position)
   camera.up.set(0, 0, 1)
   camera.position.set(centerPosition.x, centerPosition.y - 8, centerPosition.z)
   camera.lookAt(centerPosition.x, centerPosition.y, centerPosition.z)

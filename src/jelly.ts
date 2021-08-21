@@ -356,7 +356,8 @@ export class Jelly {
     }
   }
   update(dt: number = 0.01) {
-    this.position =vectorAdd(this.position, vectorScale(this.velocity, dt))
+    if (dt === 0) return
+    this.position = vectorAdd(this.position, vectorScale(this.velocity, dt))
     const w = Matrix3.fromRotation(this.momentum, vectorLength(this.momentum) * dt)
     this.rotation = w.mult(this.rotation)
     this.phase += this.phaseSpeed * dt

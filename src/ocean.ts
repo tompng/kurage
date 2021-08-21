@@ -162,6 +162,7 @@ function getWaveTexture() {
 export class OceanSurface {
   mesh: THREE.Mesh
   material: THREE.ShaderMaterial
+  time = 0
   scene = new THREE.Scene()
   uniforms = { time: { value: 0 }, wave: { value: getWaveTexture() } }
   constructor() {
@@ -176,10 +177,13 @@ export class OceanSurface {
     this.mesh.scale.set(64, 64, 1)
     this.scene.add(this.mesh)
   }
+  update(dt: number) {
+    this.time += dt
+  }
   render(renderer: THREE.WebGLRenderer, camera: THREE.Camera) {
     this.mesh.position.x = camera.position.x
     this.mesh.position.y = camera.position.y
-    this.uniforms.time.value = performance.now() / 1000
+    this.uniforms.time.value = this.time
     renderer.render(this.scene, camera)
   }
 }
