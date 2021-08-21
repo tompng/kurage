@@ -271,9 +271,9 @@ function frame() {
     jelly.momentum.y = jelly.momentum.y * 0.9 + rot.y * theta
     jelly.momentum.z = jelly.momentum.z * 0.9 + rot.z * theta
   }
-  const t = performance.now() / 1000
-  jelly.update(t)
-  jellies.forEach(j => j.update(t))
+  const dt = 0.01
+  jelly.update(dt)
+  jellies.forEach(j => j.update(dt))
   jelly.position.x = player.x
   jelly.position.y = 0
   jelly.position.z = player.z

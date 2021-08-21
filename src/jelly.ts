@@ -56,6 +56,8 @@ export class Jelly {
   strings: StringInfo[] = []
   attachments: { positions: Point3D[]; render: AttachmentRenderFunc }[] = []
   cells: Cell[] = []
+  phase = 0
+  phaseSpeed = 0.5
   scene = new THREE.Scene()
   constructor(public segments: number, texture: THREE.Texture) {
     const zscale = 1 / 3
@@ -107,7 +109,7 @@ export class Jelly {
     const randomRot = Matrix3.fromRotation({ x: 0, y: 0, z: 1 }, 2 * Math.PI * Math.random())
     this.rotation = Matrix3.fromRotation(normalize(axis), angle).mult(randomRot)
     const { segments } = this
-    this.updateDestination(0)
+    this.updateDestination()
     for (let iz = 0; iz < 2; iz++) {
       for (let ix = 0; ix <= segments; ix++) {
         for (let iy = 0; iy <= segments; iy++) {
@@ -219,9 +221,11 @@ export class Jelly {
     })
     string.calcPoints()
   }
-  jellyDestination(l: number, th: number, time: number, z: number) {
-    const f = (1 + Math.sin(1.5 * time - l + Math.sin(th) / 2)) / 2
-    const z0 = Math.sin(1.5 * time - 1) / 16
+  jellyDestination(l: number, th: number, z: number) {
+    const { phase } = this
+    const t = 2 * Math.PI * phase
+    const f = (1 + Math.sin(t - l + Math.sin(th) / 2)) / 2
+    const z0 = Math.sin(t - 1) / 16
     const rmin = 0.7
     const rmax = 1.6
     const rlen = rmax + (rmin - rmax) * f
@@ -232,13 +236,13 @@ export class Jelly {
       z: rlen - (rlen + z) * Math.cos(l / rlen) - 0.25 - z0
     }
   }
-  updateDestination(time: number) {
+  updateDestination() {
     const { segments, coords } = this
     for (let iz = 0; iz < 2; iz++) {
       for (let ix = 0; ix <= segments; ix++) {
         for (let iy = 0; iy <= segments; iy++) {
           const coord = coords[iz][ix][iy]
-          coord.dst = this.transformLocalPoint(this.jellyDestination(coord.r, coord.th, time, coord.z))
+          coord.dst = this.transformLocalPoint(this.jellyDestination(coord.r, coord.th, coord.z))
         }
       }
     }
@@ -351,12 +355,12 @@ export class Jelly {
       }
     }
   }
-  update(time: number) {
-    const dt = 0.01
+  update(dt: number = 0.01) {
     this.position =vectorAdd(this.position, vectorScale(this.velocity, dt))
     const w = Matrix3.fromRotation(this.momentum, vectorLength(this.momentum) * dt)
     this.rotation = w.mult(this.rotation)
-    this.updateDestination(time)
+    this.phase += this.phaseSpeed * dt
+    this.updateDestination()
     this.addInnerForce()
     const { coords, segments} = this
     for (let iz = 0; iz < 2; iz++) {
