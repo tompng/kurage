@@ -59,7 +59,7 @@ export class Jelly {
   phase = 0
   phaseSpeed = 0.5
   scene = new THREE.Scene()
-  constructor(public segments: number, texture: THREE.Texture) {
+  constructor(public segments: number, texture: THREE.Texture, public size = 1) {
     const zscale = 1 / 3
     for (let iz = 0; iz <= 1; iz++) {
       for (let ix = 0; ix <= segments; ix++) {
@@ -222,7 +222,7 @@ export class Jelly {
     string.calcPoints()
   }
   jellyDestination(l: number, th: number, z: number) {
-    const { phase } = this
+    const { phase, size } = this
     const t = 2 * Math.PI * phase
     const f = (1 + Math.sin(t - l + Math.sin(th) / 2)) / 2
     const z0 = Math.sin(t - 1) / 16
@@ -231,9 +231,9 @@ export class Jelly {
     const rlen = rmax + (rmin - rmax) * f
     const r = (rlen + z) * Math.sin(l / rlen)
     return {
-      x: r * Math.cos(th),
-      y: r * Math.sin(th),
-      z: rlen - (rlen + z) * Math.cos(l / rlen) - 0.25 - z0
+      x: r * Math.cos(th) * size,
+      y: r * Math.sin(th) * size,
+      z: (rlen - (rlen + z) * Math.cos(l / rlen) - 0.25 - z0) * size
     }
   }
   updateDestination() {
@@ -445,4 +445,38 @@ export class Jelly {
       cell.material.dispose()
     })
   }
+  boundingPolygon() {
+    const gpoints: Point3D[] = []
+    for (let i = 0; i < 8; i++) {
+      const th = 2 * Math.PI * i / 8
+      const cos = Math.cos(th), sin = Math.sin(th)
+      ;[0.2, 0.45, 0.75, 1].forEach(r => {
+        gpoints.push({ x: r * cos, y: r * sin, z: 1 - Math.sqrt(1 - r * r) })
+      })
+    }
+    const points = gpoints.map(p => this.transformGridPoint(p)).sort((a, b) => a.x - b.x)
+    const ups: XZ[] = []
+    const downs: XZ[] = []
+    points.forEach(p => {
+      while(ups.length >= 2 && angleCompare(ups[ups.length - 2], ups[ups.length - 1], p) >= 0) ups.pop()
+      while(downs.length >= 2 && angleCompare(downs[downs.length - 2], downs[downs.length - 1], p) <= 0) downs.pop()
+      const ulast = ups[ups.length - 1]
+      const dlast = downs[downs.length - 1]
+      if (!ulast || ulast.x !== p.x || ulast.z !== p.z) ups.push(p)
+      if (!dlast || dlast.x !== p.x || dlast.z !== p.z) downs.push(p)
+    })
+    return [...ups, ...downs.slice(1, downs.length - 1).reverse()]
+  }
+}
+
+type XZ = { x: number; z: number }
+function inaccurateAngle(a: XZ, b: XZ) {
+  if (a.z == b.z) return 0
+  const dx = b.x - a.x
+  const dz = Math.abs(b.z - a.z)
+  const sgn = b.z > a.z ? 1 : -1
+  return sgn * (dx > dz ? dz / dx : 2 - dx / dz)
+}
+function angleCompare(a: XZ, b: XZ, c: XZ) {
+  return inaccurateAngle(b, c) - inaccurateAngle(a, b)
 }

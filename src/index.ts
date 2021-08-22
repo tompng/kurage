@@ -101,15 +101,26 @@ window.onpointerdown = e => {
     touch.end = p
     touch.lastActiveTime = null
   } else {
-    const gy = 0
-    const scale = Math.tan(shortFov * Math.PI / 180 / 2)
-    const gx = camera.position.x + (gy - camera.position.y) * p.x * scale
-    const gz = camera.position.z + (gy - camera.position.y) * p.y * scale
-    addJelly(gx, gz)
-    console.log(gz, camera.position.z, p.y, camera.fov)
+    const g = screenToGlobal(p)
+    addJelly(g.x, g.z)
     touch.taps.push({ ...p, time: new Date().getTime() })
   }
 }
+function screenToGlobal(p: { x: number, y: number }) {
+  const gy = 0
+  const scale = Math.tan(shortFov * Math.PI / 180 / 2)
+  const gx = camera.position.x + (gy - camera.position.y) * p.x * scale
+  const gz = camera.position.z + (gy - camera.position.y) * p.y * scale
+  return { x: gx, y: gy, z: gz }
+}
+function globalToScreen(p: Point3D) {
+  const scale = Math.tan(shortFov * Math.PI / 180 / 2)
+  return {
+    x: (p.x - camera.position.x) / (p.y - camera.position.y) / scale,
+    y: (p.z - camera.position.z) / (p.y - camera.position.y) / scale
+  }
+}
+
 window.onpointermove = e => {
   e.preventDefault()
   if (!touch || touch.id !== e.pointerId) return
@@ -145,7 +156,7 @@ function renderRibbon(string: String3D, ribbon: Ribbon) {
 const jellies: Jelly[] = []
 
 function addJelly(x: number, z: number) {
-  const jelly = new Jelly(3, texture)
+  const jelly = new Jelly(4, texture, 0.2 + 0.8 * Math.random())
   jelly.setPosition({ x, y: 0, z })
   function renderString(string: String3D) {
     stringRenderer.varyingRequest(0.015, string.bezierSegmentsWithColor({ r: 4, g: 0, b: 0 }, { r: 3, g: 3, b: 4 }))
@@ -462,6 +473,18 @@ function renderUI() {
     uiCtx.globalAlpha = 0.5 * (1 - t)
     uiCtx.fillStyle = 'white'
     uiCtx.fill()
+  })
+  ;[jelly, ...jellies].forEach(j => {
+    const polygon = j.boundingPolygon()
+    const points = polygon.map(p => globalToScreen({ ...p, y: 0}))
+    uiCtx.beginPath()
+    points.forEach(({ x, y }, i) => i === 0 ? uiCtx.moveTo(x, y) : uiCtx.lineTo(x, y))
+    uiCtx.closePath()
+    uiCtx.strokeStyle = 'red'
+    uiCtx.globalAlpha = 0.5
+    uiCtx.lineWidth = 0.02
+    uiCtx.lineCap = uiCtx.lineJoin = 'round'
+    uiCtx.stroke()
   })
   uiCtx.restore()
 }
