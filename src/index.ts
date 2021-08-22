@@ -1,5 +1,5 @@
 import { Ribbon, String3D } from './string'
-import { Jelly } from './jelly'
+import { Jelly, boundingPolygonHitPosition } from './jelly'
 import * as THREE from 'three'
 import { Point3D, normalize, cross, dot, scale as vectorScale, add as vectorAdd, sub as vectorSub } from './math'
 import { BezierStringRenderer } from './string_mesh'
@@ -276,10 +276,23 @@ function frame() {
   player.x += player.vx * dt
   player.z += player.vz * dt
   player.z = Math.min(Math.max(player.z, oceanDepth + 1), -1)
-
   jelly.velocity.x = player.vx
   jelly.velocity.y = 0
   jelly.velocity.z = player.vz
+
+  jellies.forEach(j => {
+    const p = boundingPolygonHitPosition(jelly.boundingPolygon(), j.boundingPolygon())
+    if (p) {
+      const dx = j.position.x - p.x
+      const dz = j.position.z - p.z
+      const dr = Math.hypot(dx, dz)
+      j.velocity.x = dx / dr
+      j.velocity.z = dz / dr
+      player.vx -= dx / dr * 5 * dt
+      player.vz -= dz / dr * 5 * dt
+    }
+  })
+
   if (!isNaN(rot.x)) {
     let theta = Math.atan(Math.acos(dot(currentDir, targetDir))) * 0.5
     const dt = 0.02
@@ -473,18 +486,6 @@ function renderUI() {
     uiCtx.globalAlpha = 0.5 * (1 - t)
     uiCtx.fillStyle = 'white'
     uiCtx.fill()
-  })
-  ;[jelly, ...jellies].forEach(j => {
-    const polygon = j.boundingPolygon()
-    const points = polygon.map(p => globalToScreen({ ...p, y: 0}))
-    uiCtx.beginPath()
-    points.forEach(({ x, y }, i) => i === 0 ? uiCtx.moveTo(x, y) : uiCtx.lineTo(x, y))
-    uiCtx.closePath()
-    uiCtx.strokeStyle = 'red'
-    uiCtx.globalAlpha = 0.5
-    uiCtx.lineWidth = 0.02
-    uiCtx.lineCap = uiCtx.lineJoin = 'round'
-    uiCtx.stroke()
   })
   uiCtx.restore()
 }

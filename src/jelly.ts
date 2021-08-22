@@ -357,7 +357,9 @@ export class Jelly {
   }
   update(dt: number = 0.01) {
     if (dt === 0) return
+    this.currentBoundingPolygon = null
     this.position = vectorAdd(this.position, vectorScale(this.velocity, dt))
+    this.velocity = vectorScale(this.velocity, 1 - 20 * dt)
     const w = Matrix3.fromRotation(this.momentum, vectorLength(this.momentum) * dt)
     this.rotation = w.mult(this.rotation)
     this.phase += this.phaseSpeed * dt
@@ -445,7 +447,9 @@ export class Jelly {
       cell.material.dispose()
     })
   }
-  boundingPolygon() {
+  currentBoundingPolygon: BoundingPolygon | null = null
+  boundingPolygon(): BoundingPolygon {
+    if (this.currentBoundingPolygon) return this.currentBoundingPolygon
     const gpoints: Point3D[] = []
     for (let i = 0; i < 8; i++) {
       const th = 2 * Math.PI * i / 8
@@ -465,12 +469,13 @@ export class Jelly {
       if (!ulast || ulast.x !== p.x || ulast.z !== p.z) ups.push(p)
       if (!dlast || dlast.x !== p.x || dlast.z !== p.z) downs.push(p)
     })
-    return [...ups, ...downs.slice(1, downs.length - 1).reverse()]
+    return [...ups.reverse(), ...downs.slice(1, downs.length - 1)]
   }
 }
 
 type XZ = { x: number; z: number }
-function inaccurateAngle(a: XZ, b: XZ) {
+type BoundingPolygon = XZ[]
+function inaccurateAngleXInc(a: XZ, b: XZ) {
   if (a.z == b.z) return 0
   const dx = b.x - a.x
   const dz = Math.abs(b.z - a.z)
@@ -478,5 +483,26 @@ function inaccurateAngle(a: XZ, b: XZ) {
   return sgn * (dx > dz ? dz / dx : 2 - dx / dz)
 }
 function angleCompare(a: XZ, b: XZ, c: XZ) {
-  return inaccurateAngle(b, c) - inaccurateAngle(a, b)
+  return inaccurateAngleXInc(b, c) - inaccurateAngleXInc(a, b)
+}
+function boundingPolygonIncludes(polygon: BoundingPolygon, { x, z }: XZ) {
+  const n = polygon.length
+  for (let i = 0; i < n; i++) {
+    const pa = polygon[i]
+    const pb = polygon[(i + 1) % n]
+    if ((pa.x - x) * (pb.z - z) < (pa.z - z) * (pb.x - x)) return false
+  }
+  return true
+}
+
+export function boundingPolygonHitPosition(polygon1: BoundingPolygon, polygon2: BoundingPolygon) {
+  const ps = [
+    ...polygon1.filter(p => boundingPolygonIncludes(polygon2, p)),
+    ...polygon2.filter(p => boundingPolygonIncludes(polygon1, p))
+  ]
+  if (ps.length === 0) return null
+  return {
+    x: ps.map(p => p.x).reduce((a, b) => a + b) / ps.length,
+    z: ps.map(p => p.z).reduce((a, b) => a + b) / ps.length
+  }
 }
