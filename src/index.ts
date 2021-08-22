@@ -1,7 +1,7 @@
 import { Ribbon, String3D } from './string'
 import { Jelly, boundingPolygonHitPosition } from './jelly'
 import * as THREE from 'three'
-import { Point3D, normalize, cross, dot, scale as vectorScale, add as vectorAdd, sub as vectorSub } from './math'
+import { Point3D, normalize, cross, dot, scale as vectorScale, add as vectorAdd, sub as vectorSub, SmoothPoint3D } from './math'
 import { BezierStringRenderer } from './string_mesh'
 import { RibbonRenderer } from './ribbon_mesh'
 import { OceanDust, OceanDark, OceanSurface, OceanTerrain } from './ocean'
@@ -364,48 +364,6 @@ function renderCloverAttachment(positions: Point3D[]) {
 clovers.forEach(positions => {
   jelly.addAttachment(positions, renderCloverAttachment)
 })
-
-class SmoothPoint3D {
-  v1: Point3D = { x: 0, y: 0, z: 0 }
-  v2: Point3D = { x: 0, y: 0, z: 0 }
-  v3: Point3D = { x: 0, y: 0, z: 0 }
-  vscale: number
-  x = 0
-  y = 0
-  z = 0
-  constructor(position: Point3D, public timeScale: number) {
-    const e = Math.exp(-1 / timeScale)
-    this.vscale = 1 / (timeScale * (1 / 1 - 2 / 2 + 1 / 3))
-    this.reset(position)
-  }
-  update({ x, y, z }: Point3D, dt: number) {
-    const { timeScale } = this
-    const { v1, v2, v3, vscale } = this
-    for (const [v, n] of [[v1, 1], [v2, 2], [v3, 3]] as const) {
-      const e = Math.exp(-n / timeScale * dt)
-      const c = timeScale / n * (1 - e)
-      v.x = v.x * e + c * x
-      v.y = v.y * e + c * y
-      v.z = v.z * e + c * z
-    }
-    this.x = (v1.x - 2 * v2.x + v3.x) * vscale
-    this.y = (v1.y - 2 * v2.y + v3.y) * vscale
-    this.z = (v1.z - 2 * v2.z + v3.z) * vscale
-  }
-  reset({ x, y, z }: Point3D) {
-    const { v1, v2, v3, timeScale } = this
-    for (const [v, n] of [[v1, 1], [v2, 2], [v3, 3]] as const) {
-      const s = timeScale / n
-      v.x = x * s
-      v.y = y * s
-      v.z = z * s
-    }
-    this.x = x
-    this.y = y
-    this.z = z
-  }
-}
-
 
 const centerPosition = new SmoothPoint3D(jelly.position, 0.5)
 
