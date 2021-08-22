@@ -275,7 +275,6 @@ function frame() {
   player.th += d * (0.2 + Math.min(Math.max(0, 100 * vdot), 0.6)) * dt
   player.x += player.vx * dt
   player.z += player.vz * dt
-  player.z = Math.min(Math.max(player.z, oceanDepth + 1), -1)
   jelly.velocity.x = player.vx
   jelly.velocity.y = 0
   jelly.velocity.z = player.vz
@@ -295,20 +294,33 @@ function frame() {
 
   if (!isNaN(rot.x)) {
     let theta = Math.atan(Math.acos(dot(currentDir, targetDir))) * 0.5
-    const dt = 0.02
-    jelly.velocity.x += currentDir.x * dt
-    jelly.velocity.y += currentDir.y * dt
-    jelly.velocity.z += currentDir.z * dt
+    jelly.velocity.x += currentDir.x * dt * 2
+    jelly.velocity.y += currentDir.y * dt * 2
+    jelly.velocity.z += currentDir.z * dt * 2
     // jelly.rotation = Matrix3.fromRotation(rot, theta).mult(jelly.rotation)
-    jelly.momentum.x = jelly.momentum.x * 0.9 + rot.x * theta
-    jelly.momentum.y = jelly.momentum.y * 0.9 + rot.y * theta
-    jelly.momentum.z = jelly.momentum.z * 0.9 + rot.z * theta
+    const mscale = 1 - 10 * dt
+    jelly.momentum.x = jelly.momentum.x * mscale + rot.x * theta
+    jelly.momentum.y = jelly.momentum.y * mscale + rot.y * theta
+    jelly.momentum.z = jelly.momentum.z * mscale + rot.z * theta
+  }
+  const zs = jelly.boundingPolygon().map(p => p.z)
+  const zmax = Math.max(...zs)
+  const zmin = Math.min(...zs)
+  const offset = 0.25
+  if (zmax > -offset) {
+    player.vz *= Math.max(1 - 20 * (zmax + offset) * dt, 0)
+    player.vz -= (zmax + offset) * dt * 10
+  }
+  if (zmin < oceanDepth + offset) {
+    player.vz *= Math.max(1 - 20 * (oceanDepth + offset - zmin) * dt, 0)
+    player.vz += (oceanDepth + offset - zmin) * dt * 10
   }
   jelly.update(dt)
   jellies.forEach(j => j.update(dt))
   jelly.position.x = player.x
   jelly.position.y = 0
   jelly.position.z = player.z
+  jelly.currentBoundingPolygon = null
   render()
   requestAnimationFrame(frame)
 }
