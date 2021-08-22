@@ -360,6 +360,7 @@ export class Jelly {
     this.currentBoundingPolygon = null
     this.position = vectorAdd(this.position, vectorScale(this.velocity, dt))
     this.velocity = vectorScale(this.velocity, 1 - 20 * dt)
+    this.momentum = vectorScale(this.momentum, 1 - 20 * dt)
     const w = Matrix3.fromRotation(this.momentum, vectorLength(this.momentum) * dt)
     this.rotation = w.mult(this.rotation)
     this.phase += this.phaseSpeed * dt
