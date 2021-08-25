@@ -290,6 +290,34 @@ function frame() {
     }
   })
 
+  jellies.forEach(j1 => {
+    jellies.forEach(j2 => {
+      if (j1 === j2) return
+      const p = boundingPolygonHitPosition(j1.boundingPolygon(), j2.boundingPolygon())
+      if (p) {
+        const dx = j1.position.x - j2.position.x
+        const dz = j1.position.z - j2.position.z
+        const dr = Math.hypot(dx, dz)
+        j1.velocity.x = dx / dr
+        j1.velocity.z = dz / dr
+        j2.velocity.x -= dx / dr * 5 * dt
+        j2.velocity.z -= dz / dr * 5 * dt
+      }
+    })
+  })
+
+  jellies.forEach(j => {
+    j.boundingPolygon().forEach(p => {
+      const norm = terrain.hitNormal(p.x, p.z)
+      if (!norm) return
+      const v = j.velocity
+      let vdot = norm.x * v.x + norm.z * v.z
+      if (vdot > 0) vdot /= 2
+      v.x = v.x - norm.x * vdot + 20 * norm.x * dt
+      v.z = v.z - norm.z * vdot + 20 * norm.z * dt
+    })
+  })
+
   if (!isNaN(rot.x)) {
     let theta = Math.atan(Math.acos(dot(currentDir, targetDir))) * 0.5
     jelly.velocity.x += currentDir.x * dt * 2
