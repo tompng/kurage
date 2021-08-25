@@ -307,7 +307,8 @@ function frame() {
     const norm = terrain.hitNormal(p.x, p.z)
     if (!norm) return
     hit = true
-    const vdot = norm.x * player.vx + norm.z * player.vz
+    let vdot = norm.x * player.vx + norm.z * player.vz
+    if (vdot > 0) vdot /= 2
     player.vx = player.vx - norm.x * vdot + 2 * norm.x * dt
     player.vz = player.vz - norm.z * vdot + 2 * norm.z * dt
   })

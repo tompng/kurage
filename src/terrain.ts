@@ -86,7 +86,7 @@ export class HitMap {
   }
   get(x: number, y: number) {
     const max = this.size - 1
-    return this.map[Math.max(Math.min(Math.round(x), max), 0)][Math.max(Math.min(Math.round(y), max), 0)]
+    return this.map[Math.max(Math.min(Math.floor(x), max), 0)][Math.max(Math.min(Math.floor(y), max), 0)]
   }
   normal(x: number, y: number) {
     const vcenter = this.get(x, y)
