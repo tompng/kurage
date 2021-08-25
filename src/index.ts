@@ -4,9 +4,10 @@ import * as THREE from 'three'
 import { Point3D, normalize, cross, dot, scale as vectorScale, add as vectorAdd, sub as vectorSub, SmoothPoint3D } from './math'
 import { BezierStringRenderer } from './string_mesh'
 import { RibbonRenderer } from './ribbon_mesh'
-import { OceanDust, OceanDark, OceanSurface, OceanTerrain } from './ocean'
+import { OceanDust, OceanDark, OceanSurface } from './ocean'
 import textureUrl from './images/jelly/0.jpg'
-
+import { Terrain, test } from './terrain'
+const terrain = new Terrain()
 const texture = new THREE.TextureLoader().load(textureUrl)
 texture.wrapS = THREE.ClampToEdgeWrapping
 texture.wrapT = THREE.ClampToEdgeWrapping
@@ -59,8 +60,8 @@ function setSize(){
   uiCanvas.height = height * devicePixelRatio
   uiCanvas.style.width = `${width}px`
   uiCanvas.style.height = `${height}px`
-  renderer.domElement.style.left = uiCanvas.style.left = `${(innerWidth - width) / 2}px`
-  renderer.domElement.style.top = uiCanvas.style.top = `${(innerHeight - height) / 2}px`
+  dom.style.left = uiCanvas.style.left = `${(innerWidth - width) / 2}px`
+  dom.style.top = uiCanvas.style.top = `${(innerHeight - height) / 2}px`
 }
 setSize()
 window.onresize = setSize
@@ -145,7 +146,6 @@ jelly.setPosition({ x: 0, y: 0, z: -2 }, { x: -1, y: 0, z: 0.1 })
 const oceanDust = new OceanDust(256)
 const oceanDark = new OceanDark()
 const oceanSurface = new OceanSurface()
-const oceanTerrain = new OceanTerrain()
 
 const ribbonSegments = 20
 const ribbonRenderer = new RibbonRenderer(ribbonSegments, 0.3, 0.3)
@@ -254,7 +254,6 @@ for (let i = 0; i < 64; i++) {
 }
 
 assignGlobal({ player })
-const oceanDepth = -16
 function frame() {
   let dt = 0.01
   const { stopAt, startAt } = window as any
@@ -273,8 +272,6 @@ function frame() {
   player.vz += -player.vz * 8 * dt + 2 * (currentDir.z + Math.sin(player.dstTheta)) * dt
   const vdot = Math.cos(player.th) * player.vx + Math.sin(player.th) * player.vz
   player.th += d * (0.2 + Math.min(Math.max(0, 100 * vdot), 0.6)) * dt
-  player.x += player.vx * dt
-  player.z += player.vz * dt
   jelly.velocity.x = player.vx
   jelly.velocity.y = 0
   jelly.velocity.z = player.vz
@@ -303,18 +300,19 @@ function frame() {
     jelly.momentum.y = jelly.momentum.y * mscale + rot.y * theta
     jelly.momentum.z = jelly.momentum.z * mscale + rot.z * theta
   }
-  const zs = jelly.boundingPolygon().map(p => p.z)
-  const zmax = Math.max(...zs)
-  const zmin = Math.min(...zs)
-  const offset = 0.25
-  if (zmax > -offset) {
-    player.vz *= Math.max(1 - 20 * (zmax + offset) * dt, 0)
-    player.vz -= (zmax + offset) * dt * 10
-  }
-  if (zmin < oceanDepth + offset) {
-    player.vz *= Math.max(1 - 20 * (oceanDepth + offset - zmin) * dt, 0)
-    player.vz += (oceanDepth + offset - zmin) * dt * 10
-  }
+  const polygon = jelly.boundingPolygon()
+  const hitPositions = polygon.forEach(p => {
+    const norm = terrain.hitNormal(p.x, p.z)
+    if (!norm) return
+    player.vx *= 1 - 10 * dt
+    player.vz *= 1 - 10 * dt
+    const vdot = norm.x * player.vx + norm.z * player.vz
+    player.vx = player.vx - norm.x * vdot + 2 * norm.x * dt
+    player.vz = player.vz - norm.z * vdot + 2 * norm.z * dt
+  })
+  player.x += player.vx * dt
+  player.z += player.vz * dt
+
   jelly.update(dt)
   jellies.forEach(j => j.update(dt))
   jelly.position.x = player.x
@@ -387,10 +385,9 @@ function render() {
   camera.up.set(0, 0, 1)
   camera.position.set(centerPosition.x, centerPosition.y - 8, centerPosition.z)
   camera.lookAt(centerPosition.x, centerPosition.y, centerPosition.z)
-
+  renderer.render(terrain.scene, camera)
   oceanDark.render(renderer, camera)
   oceanSurface.render(renderer, camera)
-  oceanTerrain.render(renderer, camera)
   jelly.render(renderer, camera)
   jellies.forEach(j => j.render(renderer, camera))
   stringRenderer.render(renderer, camera)
