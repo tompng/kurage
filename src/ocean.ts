@@ -191,16 +191,19 @@ export class OceanSurface {
 
 const terrainVertexShader = `
 varying vec3 vPosition;
+varying vec2 vTexcoord;
 void main() {
   vPosition = (modelMatrix * vec4(position, 1)).xyz;
+  vTexcoord = uv;
   gl_Position = projectionMatrix * (viewMatrix * vec4(vPosition, 1));
 }
 `
 
 const terrainFragmentShader = `
+uniform float time;
 uniform sampler2D wave;
 varying vec3 vPosition;
-uniform float time;
+varying vec2 vTexcoord;
 
 const vec3 decay = ${WATER_DECAY};
 void main() {
@@ -211,7 +214,7 @@ void main() {
   vec3 k = (1.0 - dir.z) * decay;
   vec3 zdecay = exp(decay * cameraPosition.z);
   vec3 water = ${LIGHT0} * zdecay * (1.0 - exp(-k * distance)) / k;
-  vec3 floorColor = dot(texture2D(wave, vPosition.xy / 2.0), vec4(0.3,0.3,0.3,0)) * vec3(1, 1, 1);
+  vec3 floorColor = dot(texture2D(wave, vTexcoord), vec4(0.3,0.3,0.3,0)) * vec3(1, 1, 1);
   float dist = length(vPosition - vec3(cameraPosition.x, 0, cameraPosition.z));
   vec3 c = floorColor * exp(-0.6 * dist) * 2.0;
   gl_FragColor = vec4(water + c * d, 1);
@@ -226,7 +229,7 @@ export class OceanTerrain {
       uniforms: this.uniforms,
       vertexShader: terrainVertexShader,
       fragmentShader: terrainFragmentShader,
-      side: THREE.FrontSide
+      side: THREE.DoubleSide
     })
     geometries.forEach(geometry => {
       const mesh = new THREE.Mesh(geometry, this.material)
