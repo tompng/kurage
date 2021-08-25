@@ -193,8 +193,6 @@ const terrainVertexShader = `
 varying vec3 vPosition;
 void main() {
   vPosition = (modelMatrix * vec4(position, 1)).xyz;
-  float x = vPosition.x;
-  vPosition.z += sin(vPosition.y) * dot(sin(vec3(0.14, 0.35, 0.51) * x), vec3(0.1));
   gl_Position = projectionMatrix * (viewMatrix * vec4(vPosition, 1));
 }
 `
@@ -220,27 +218,22 @@ void main() {
 }
 `
 export class OceanTerrain {
-  mesh: THREE.Mesh
   material: THREE.ShaderMaterial
   scene = new THREE.Scene()
   uniforms = { time: { value: 0 }, wave: { value: getWaveTexture() } }
-  constructor() {
+  constructor(geometries: THREE.BufferGeometry[]) {
     this.material = new THREE.ShaderMaterial({
       uniforms: this.uniforms,
       vertexShader: terrainVertexShader,
       fragmentShader: terrainFragmentShader,
       side: THREE.FrontSide
     })
-    const geometry = new THREE.PlaneBufferGeometry(1, 1, 12, 12)
-    this.mesh = new THREE.Mesh(geometry, this.material)
-    this.mesh.frustumCulled = false
-    this.mesh.scale.set(12, 12, 1)
-    this.scene.add(this.mesh)
+    geometries.forEach(geometry => {
+      const mesh = new THREE.Mesh(geometry, this.material)
+      this.scene.add(mesh)
+    })
   }
   render(renderer: THREE.WebGLRenderer, camera: THREE.Camera) {
-    this.mesh.position.x = Math.round(camera.position.x)
-    this.mesh.position.y = Math.round(camera.position.y) + 6
-    this.mesh.position.z = -16
     this.uniforms.time.value = performance.now() / 1000
     renderer.render(this.scene, camera)
   }

@@ -4,7 +4,7 @@ import * as THREE from 'three'
 import { Point3D, normalize, cross, dot, scale as vectorScale, add as vectorAdd, sub as vectorSub, SmoothPoint3D } from './math'
 import { BezierStringRenderer } from './string_mesh'
 import { RibbonRenderer } from './ribbon_mesh'
-import { OceanDust, OceanDark, OceanSurface } from './ocean'
+import { OceanDust, OceanDark, OceanSurface, OceanTerrain } from './ocean'
 import textureUrl from './images/jelly/0.jpg'
 import { Terrain, test } from './terrain'
 const terrain = new Terrain()
@@ -13,6 +13,7 @@ texture.wrapS = THREE.ClampToEdgeWrapping
 texture.wrapT = THREE.ClampToEdgeWrapping
 texture.generateMipmaps = true
 texture.needsUpdate = true
+const oceanTerrain = new OceanTerrain(terrain.geometries)
 
 const stringRenderer = new BezierStringRenderer(4, 5)
 function requestWhiteBlueString(string: String3D) {
@@ -301,11 +302,11 @@ function frame() {
     jelly.momentum.z = jelly.momentum.z * mscale + rot.z * theta
   }
   const polygon = jelly.boundingPolygon()
-  const hitPositions = polygon.forEach(p => {
+  let hit = false
+  polygon.forEach(p => {
     const norm = terrain.hitNormal(p.x, p.z)
     if (!norm) return
-    player.vx *= 1 - 10 * dt
-    player.vz *= 1 - 10 * dt
+    hit = true
     const vdot = norm.x * player.vx + norm.z * player.vz
     player.vx = player.vx - norm.x * vdot + 2 * norm.x * dt
     player.vz = player.vz - norm.z * vdot + 2 * norm.z * dt
@@ -385,7 +386,7 @@ function render() {
   camera.up.set(0, 0, 1)
   camera.position.set(centerPosition.x, centerPosition.y - 8, centerPosition.z)
   camera.lookAt(centerPosition.x, centerPosition.y, centerPosition.z)
-  renderer.render(terrain.scene, camera)
+  oceanTerrain.render(renderer, camera)
   oceanDark.render(renderer, camera)
   oceanSurface.render(renderer, camera)
   jelly.render(renderer, camera)

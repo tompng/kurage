@@ -3,7 +3,7 @@ import { Mesh } from 'three'
 
 const terrainCoords = [
   [[2,0],[66,56],[67,128],[62,156],[93,240],[86,282],[70,350],[102,412],[66,538],[37,693],[42,727],[79,802],[133,866],[165,881],[191,913],[213,924],[276,938],[383,946],[439,930],[467,879],[468,768],[461,729],[471,690],[514,682],[537,731],[575,805],[600,868],[636,909],[675,930],[745,952],[812,954],[867,951],[925,928],[969,875],[960,784],[948,748],[910,660],[929,601],[962,593],[990,551],[995,500],[997,443],[978,392],[923,394],[863,393],[838,365],[847,276],[875,160],[882,127],[904,89],[947,59],[977,49],[1009,19],[1022,0]],
-  [[459,60],[521,54],[611,71],[625,115],[591,131],[547,128],[460,92],[459,60]],
+  [[459,30],[521,24],[611,41],[625,85],[591,101],[547,98],[460,62],[459,30]],
   [[161,586],[172,652],[215,683],[227,704],[246,747],[330,736],[385,701],[396,689],[380,667],[343,637],[231,607],[201,587],[161,586]],
   [[596,251],[657,241],[703,226],[752,219],[797,212],[790,256],[752,291],[721,310],[668,314],[615,309],[578,287],[580,261],[596,251]],
   [[726,470],[768,461],[809,438],[848,435],[864,474],[856,513],[854,526],[870,583],[834,590],[771,565],[704,515],[716,484],[717,483],[726,470]],
@@ -19,7 +19,6 @@ export class HitMap {
     ctx.scale(size / 1024, size / 1024)
     ctx.fillStyle = ctx.strokeStyle = 'white'
     ctx.lineJoin = ctx.lineCap = 'round'
-    // ctx.strokeStyle = 'gray'
     ctx.beginPath()
     terrainCoords.forEach((points, idx) => {
       ctx.moveTo(...points[0])
@@ -36,7 +35,7 @@ export class HitMap {
     ctx.lineWidth = size / 64
     ctx.stroke()
     ctx.globalAlpha = 1
-    ctx.lineWidth = size / 256
+    ctx.lineWidth = size / 384
     ctx.fill()
     ctx.stroke()
     ctx.beginPath()
@@ -130,14 +129,10 @@ export function generateGeometry(coords: [number, number][], scale: number) {
 }
 
 export class Terrain {
-  scene = new THREE.Scene()
   hitmap = new HitMap(1024)
+  geometries: THREE.BufferGeometry[]
   constructor(public scale = 1 / 8) {
-    terrainCoords.map(coords => {
-      const geometry = generateGeometry(coords, this.scale)
-      const mesh = new Mesh(geometry, new THREE.MeshBasicMaterial({ color: 'gray', side: THREE.DoubleSide }))
-      this.scene.add(mesh)
-    })
+    this.geometries = terrainCoords.map(coords => generateGeometry(coords, this.scale))
   }
   toHitmapCoord(x: number, z: number) {
     return [512 + x / this.scale, -z / this.scale] as const
