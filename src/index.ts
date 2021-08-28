@@ -1,26 +1,23 @@
 import { Ribbon, String3D } from './string'
 import { Jelly, boundingPolygonHitPosition } from './jelly'
 import * as THREE from 'three'
-import { Point3D, normalize, cross, dot, scale as vectorScale, add as vectorAdd, sub as vectorSub, SmoothPoint3D } from './math'
+import { randomDirection, Point3D, normalize, cross, dot, scale as vectorScale, add as vectorAdd, sub as vectorSub, SmoothPoint3D } from './math'
 import { BezierStringRenderer } from './string_mesh'
 import { RibbonRenderer } from './ribbon_mesh'
 import { OceanDust, OceanDark, OceanSurface, OceanTerrain } from './ocean'
 import textureUrl from './images/jelly/0.jpg'
 import { Terrain, test } from './terrain'
-import { createShrimpGeometryMaterial, createFishGeometryMaterial } from './fish_shrimp'
+import { FishShrimpCloud, createShrimpGeometryMaterial, createFishGeometryMaterial } from './fish_shrimp'
 
-const [shrimpGeom, shrimpMaterial] = createShrimpGeometryMaterial()
-const [fishGeom, fishMaterial] = createFishGeometryMaterial()
-const fish = new THREE.Mesh(fishGeom, fishMaterial)
-const shrimp = new THREE.Mesh(shrimpGeom, shrimpMaterial)
-fish.position.z = -0.5
-shrimp.position.z = -0.7
-fish.position.x = 0.5
-fish.scale.set(0.1, 0.1, 0.1)
-shrimp.scale.set(0.1, 0.1, 0.1)
-const scene = new THREE.Scene
-scene.add(fish, shrimp)
-
+const fsCloud = new FishShrimpCloud()
+for (let i = 0; i < 10; i++) {
+  fsCloud.spawn({
+    x: -0.5 + Math.random(),
+    y: 0,
+    z: -0.1 - Math.random()
+  })
+}
+assignGlobal({ fsCloud })
 const terrain = new Terrain()
 const texture = new THREE.TextureLoader().load(textureUrl)
 texture.wrapS = THREE.ClampToEdgeWrapping
@@ -118,7 +115,15 @@ window.onpointerdown = e => {
     touch.lastActiveTime = null
   } else {
     const g = screenToGlobal(p)
-    addJelly(g.x, g.z)
+    // addJelly(g.x, g.z)
+    for (let i = 0; i < 10; i++) {
+      const a = randomDirection()
+      fsCloud.spawn({
+        x: g.x + a.x,
+        y: a.y,
+        z: g.z + a.z
+      })
+    }
     touch.taps.push({ ...p, time: new Date().getTime() })
   }
 }
@@ -277,6 +282,7 @@ function frame() {
   } else if (stopAt) {
     dt = Math.max(1 - (performance.now() - stopAt) / 1000, 0) * 0.01
   }
+  fsCloud.update(centerPosition, dt)
   oceanSurface.update(dt)
   centerPosition.update(jelly.position, dt)
   const currentDir = normalize(vectorSub(jelly.transformLocalPoint({ x: 0, y: 0, z: -1 }), jelly.position))
@@ -437,7 +443,7 @@ function render() {
   stringRenderer.render(renderer, camera)
   oceanDust.render(renderer, camera)
 
-  renderer.render(scene, camera)
+  renderer.render(fsCloud.scene, camera)
 
   renderer.setRenderTarget(null)
   renderer.render(targetRenderScene, targetRenderCamera)
