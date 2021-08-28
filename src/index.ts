@@ -7,6 +7,20 @@ import { RibbonRenderer } from './ribbon_mesh'
 import { OceanDust, OceanDark, OceanSurface, OceanTerrain } from './ocean'
 import textureUrl from './images/jelly/0.jpg'
 import { Terrain, test } from './terrain'
+import { createShrimpGeometryMaterial, createFishGeometryMaterial } from './fish_shrimp'
+
+const [shrimpGeom, shrimpMaterial] = createShrimpGeometryMaterial()
+const [fishGeom, fishMaterial] = createFishGeometryMaterial()
+const fish = new THREE.Mesh(fishGeom, fishMaterial)
+const shrimp = new THREE.Mesh(shrimpGeom, shrimpMaterial)
+fish.position.z = -0.5
+shrimp.position.z = -0.7
+fish.position.x = 0.5
+fish.scale.set(0.1, 0.1, 0.1)
+shrimp.scale.set(0.1, 0.1, 0.1)
+const scene = new THREE.Scene
+scene.add(fish, shrimp)
+
 const terrain = new Terrain()
 const texture = new THREE.TextureLoader().load(textureUrl)
 texture.wrapS = THREE.ClampToEdgeWrapping
@@ -422,6 +436,8 @@ function render() {
   jellies.forEach(j => j.render(renderer, camera))
   stringRenderer.render(renderer, camera)
   oceanDust.render(renderer, camera)
+
+  renderer.render(scene, camera)
 
   renderer.setRenderTarget(null)
   renderer.render(targetRenderScene, targetRenderCamera)
