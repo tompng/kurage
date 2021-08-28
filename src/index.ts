@@ -11,7 +11,7 @@ import { FishShrimpCloud, createShrimpGeometryMaterial, createFishGeometryMateri
 
 const fsCloud = new FishShrimpCloud()
 for (let i = 0; i < 10; i++) {
-  fsCloud.spawn({
+  fsCloud.spawnShrimp({
     x: -0.5 + Math.random(),
     y: 0,
     z: -0.1 - Math.random()
@@ -116,9 +116,10 @@ window.onpointerdown = e => {
   } else {
     const g = screenToGlobal(p)
     // addJelly(g.x, g.z)
+    const spawn = Math.random() < 0.5 ? 'spawnFish' : 'spawnShrimp'
     for (let i = 0; i < 10; i++) {
       const a = randomDirection()
-      fsCloud.spawn({
+      fsCloud[spawn]({
         x: g.x + a.x,
         y: a.y,
         z: g.z + a.z

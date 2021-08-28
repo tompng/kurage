@@ -1,4 +1,4 @@
-import { distance, Point3D } from './math'
+import { distance, Point3D, randomDirection } from './math'
 import * as THREE from 'three'
 import { Mesh } from 'three'
 
@@ -246,8 +246,58 @@ export function createShrimpGeometryMaterial() {
 }
 
 const [fishGeometry, fishShader] = createFishGeometryMaterial()
+const [shrimpGeometry, shrimpShader] = createShrimpGeometryMaterial()
 
-type Dir = { th: number; z: number }
+class Shrimp {
+  phase = Math.random()
+  mesh: THREE.Mesh
+  jump = { x: 0, y: 0, z: 0 }
+  th: number
+  thDst: number
+  thz: number
+  thzDst: number
+  constructor(public position: Point3D) {
+    this.mesh = new Mesh(shrimpGeometry, shrimpShader)
+    this.mesh.scale.set(0.1, 0.1, 0.1)
+    this.th = this.thDst = 2 * Math.PI * Math.random()
+    this.thz = this.thzDst = 0.4 * Math.random() - 0.2
+  }
+  update(dt: number) {
+    this.phase += Math.random() * dt
+    if (this.phase > 1) {
+      this.phase = 0.5 * Math.random()
+      this.jump = randomDirection()
+      this.thzDst = 0.4 * Math.random() - 0.2
+      this.thDst = this.th + Math.PI / 4 * (2 * Math.random() - 1)
+      const dz = Math.random() - 0.5
+      const dr = Math.sqrt(1 - dz * dz)
+      this.jump.x = dr * Math.cos(this.thDst)
+      this.jump.y = dr * Math.sin(this.thDst)
+      this.jump.z = dz
+      this.thz += 0.5
+    }
+    const s = 1 - 8 * dt
+    this.jump.x *= s
+    this.jump.y *= s
+    this.jump.z *= s
+    this.th = this.th * s + (1 - s) * this.thDst
+    this.thz = this.thz * s + (1 - s) * this.thzDst
+    this.position.x += 2 * this.jump.x * dt
+    this.position.y += 2 * this.jump.y * dt
+    this.position.z += 2 * this.jump.z * dt
+  }
+  updateForRender() {
+    const { mesh, position, th } = this
+    mesh.position.set(position.x, position.y / 4, position.z)
+    mesh.setRotationFromEuler(new THREE.Euler(
+      0,
+      Math.atan(this.thz),
+      th,
+      'XZY'
+    ))
+  }
+}
+
 class Fish {
   position: Point3D
   phase = 2 * Math.PI * Math.random()
@@ -298,26 +348,31 @@ export class FishShrimpCloud {
   scene = new THREE.Scene()
   updateRadius = 4
   despawnRadius = 8
-  fishes = new Set<Fish>()
+  mobs = new Set<Fish | Shrimp>()
   update(center: Point3D, dt: number) {
-    const { fishes, scene, updateRadius, despawnRadius } = this
-    const destroys: Fish[] = []
-    fishes.forEach(fish => {
-      const dist = distance(fish.position, center)
+    const { mobs, scene, updateRadius, despawnRadius } = this
+    const destroys: (Fish | Shrimp)[] = []
+    mobs.forEach(mob => {
+      const dist = distance(mob.position, center)
       if (dist < updateRadius) {
-        fish.update(dt)
-        fish.updateForRender()
+        mob.update(dt)
+        mob.updateForRender()
       }
-      if (dist > despawnRadius) destroys.push(fish)
+      if (dist > despawnRadius) destroys.push(mob)
     })
-    destroys.forEach(fish => {
-      scene.remove(fish.mesh)
-      fishes.delete(fish)
+    destroys.forEach(mob => {
+      scene.remove(mob.mesh)
+      mobs.delete(mob)
     })
   }
-  spawn(position: Point3D) {
+  spawnFish(position: Point3D) {
     const fish = new Fish(position)
     this.scene.add(fish.mesh)
-    this.fishes.add(fish)
+    this.mobs.add(fish)
+  }
+  spawnShrimp(position: Point3D) {
+    const shrimp = new Shrimp(position)
+    this.scene.add(shrimp.mesh)
+    this.mobs.add(shrimp)
   }
 }
