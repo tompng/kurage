@@ -4,6 +4,7 @@ import { Mesh } from 'three'
 
 type XY = [number, number]
 type XYZ = [number, number, number]
+type HitFunc = (x: number, z: number) => boolean
 
 const shrimpOutline: [XY[], XY[]] = [
   [
@@ -262,29 +263,33 @@ class Shrimp {
     this.th = this.thDst = 2 * Math.PI * Math.random()
     this.thz = this.thzDst = 0.4 * Math.random() - 0.2
   }
-  update(dt: number) {
+  update(dt: number, hitFunc: HitFunc) {
+    const { position, jump } = this
     this.phase += Math.random() * dt
     if (this.phase > 1) {
       this.phase = 0.5 * Math.random()
-      this.jump = randomDirection()
       this.thzDst = 0.4 * Math.random() - 0.2
-      this.thDst = this.th + Math.PI / 4 * (2 * Math.random() - 1)
+      this.thDst = this.th + Math.PI / 3 * (2 * Math.random() - 1)
       const dz = Math.random() - 0.5
       const dr = Math.sqrt(1 - dz * dz)
-      this.jump.x = dr * Math.cos(this.thDst)
-      this.jump.y = dr * Math.sin(this.thDst)
-      this.jump.z = dz
+      jump.x = dr * Math.cos(this.thDst)
+      jump.y = dr * Math.sin(this.thDst)
+      jump.z = dz
       this.thz += 0.5
     }
     const s = 1 - 8 * dt
-    this.jump.x *= s
-    this.jump.y *= s
-    this.jump.z *= s
+    jump.x *= s
+    jump.y *= s
+    jump.z *= s
     this.th = this.th * s + (1 - s) * this.thDst
     this.thz = this.thz * s + (1 - s) * this.thzDst
-    this.position.x += 2 * this.jump.x * dt
-    this.position.y += 2 * this.jump.y * dt
-    this.position.z += 2 * this.jump.z * dt
+    const x2 = position.x + 2 * jump.x * dt
+    position.y += 2 * jump.y * dt
+    const z2 = position.z + 2 * jump.z * dt
+    if (!hitFunc(x2, z2)) {
+      position.x = x2
+      position.z = z2
+    }
   }
   updateForRender() {
     const { mesh, position, th } = this
@@ -315,7 +320,7 @@ class Fish {
     this.mesh = new Mesh(fishGeometry, fishShader)
     this.mesh.scale.set(0.1, 0.1, 0.1)
   }
-  update(dt: number) {
+  update(dt: number, hitFunc: HitFunc) {
     const { v, position, spawnPosition } = this
     const dirx = Math.cos(this.dir)
     const diry = Math.sin(this.dir)
@@ -327,9 +332,13 @@ class Fish {
     this.dir += 8 * (cross * lr * lr + (Math.random() - 0.5)) * dt
     this.smoothDir = this.smoothDir * (1 - dt) + dt * this.dir
     this.dz = (Math.sin(this.zw1 * this.phase) + Math.sin(this.zw2 * this.phase)) / 4
-    position.x += v * Math.cos(this.smoothDir) * dt
+    const x2 = position.x + v * Math.cos(this.smoothDir) * dt
     position.y += v * Math.sin(this.smoothDir) * dt
-    position.z += v * this.dz * dt
+    const z2 = position.z + v * this.dz * dt
+    if (!hitFunc(x2, z2)) {
+      position.x = x2
+      position.z = z2
+    }
     if (position.z > -0.2) position.z = -0.2
   }
   updateForRender() {
@@ -349,13 +358,14 @@ export class FishShrimpCloud {
   updateRadius = 4
   despawnRadius = 8
   mobs = new Set<Fish | Shrimp>()
+  constructor(public hitFunc: HitFunc) {}
   update(center: Point3D, dt: number) {
     const { mobs, scene, updateRadius, despawnRadius } = this
     const destroys: (Fish | Shrimp)[] = []
     mobs.forEach(mob => {
       const dist = distance(mob.position, center)
       if (dist < updateRadius) {
-        mob.update(dt)
+        mob.update(dt, this.hitFunc)
         mob.updateForRender()
       }
       if (dist > despawnRadius) destroys.push(mob)
@@ -366,11 +376,13 @@ export class FishShrimpCloud {
     })
   }
   spawnFish(position: Point3D) {
+    if (this.hitFunc(position.x, position.z)) return
     const fish = new Fish(position)
     this.scene.add(fish.mesh)
     this.mobs.add(fish)
   }
   spawnShrimp(position: Point3D) {
+    if (this.hitFunc(position.x, position.z)) return
     const shrimp = new Shrimp(position)
     this.scene.add(shrimp.mesh)
     this.mobs.add(shrimp)

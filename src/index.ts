@@ -9,7 +9,15 @@ import textureUrl from './images/jelly/0.jpg'
 import { Terrain, test } from './terrain'
 import { FishShrimpCloud, createShrimpGeometryMaterial, createFishGeometryMaterial } from './fish_shrimp'
 
-const fsCloud = new FishShrimpCloud()
+const terrain = new Terrain()
+const texture = new THREE.TextureLoader().load(textureUrl)
+texture.wrapS = THREE.ClampToEdgeWrapping
+texture.wrapT = THREE.ClampToEdgeWrapping
+texture.generateMipmaps = true
+texture.needsUpdate = true
+const oceanTerrain = new OceanTerrain(terrain.geometries)
+
+const fsCloud = new FishShrimpCloud((x, z) => terrain.hitTest(x, z))
 for (let i = 0; i < 10; i++) {
   fsCloud.spawnShrimp({
     x: -0.5 + Math.random(),
@@ -18,13 +26,6 @@ for (let i = 0; i < 10; i++) {
   })
 }
 assignGlobal({ fsCloud })
-const terrain = new Terrain()
-const texture = new THREE.TextureLoader().load(textureUrl)
-texture.wrapS = THREE.ClampToEdgeWrapping
-texture.wrapT = THREE.ClampToEdgeWrapping
-texture.generateMipmaps = true
-texture.needsUpdate = true
-const oceanTerrain = new OceanTerrain(terrain.geometries)
 
 const stringRenderer = new BezierStringRenderer(4, 5)
 function requestWhiteBlueString(string: String3D) {
@@ -118,12 +119,8 @@ window.onpointerdown = e => {
     // addJelly(g.x, g.z)
     const spawn = Math.random() < 0.5 ? 'spawnFish' : 'spawnShrimp'
     for (let i = 0; i < 10; i++) {
-      const a = randomDirection()
-      fsCloud[spawn]({
-        x: g.x + a.x,
-        y: a.y,
-        z: g.z + a.z
-      })
+      const { x, y, z } = randomDirection()
+      fsCloud[spawn]({ x: x + g.x, y, z: z + g.z })
     }
     touch.taps.push({ ...p, time: new Date().getTime() })
   }
