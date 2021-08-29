@@ -365,8 +365,8 @@ function frame() {
   hitMap.clear()
   hitMap.center.x = centerPosition.x
   hitMap.center.z = centerPosition.z
-  jelly.collectPoints(ps => hitMap.addPoints(ps))
-  fsCloud.update(centerPosition, dt, hitMap, touch.gpos)
+  jelly.collectPoints(ps => hitMap.addPoints(ps), true)
+  fsCloud.update(centerPosition, jelly.position, dt, hitMap, touch.gpos)
   touch.gpos = null
 
   render()

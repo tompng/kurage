@@ -356,9 +356,11 @@ class Fish {
 
 const particleVertexShader = `
 uniform float phase;
+uniform vec3 destination;
 void main() {
-  gl_PointSize = 8.0;
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(phase * position, 1);
+  gl_PointSize = 16.0;
+  vec3 gpos = (modelMatrix * vec4(phase * position, 1)).xyz + phase * phase * phase * destination;
+  gl_Position = projectionMatrix * viewMatrix * vec4(gpos, 1);
 }
 
 `
@@ -367,16 +369,21 @@ uniform float phase;
 uniform vec3 color;
 void main() {
   vec2 xy = gl_PointCoord * 2.0 - 1.0;
-  float v = max(1.0 - dot(xy, xy), 0.0);
+  float v = clamp(2.0 * (1.0 - dot(xy, xy)), 0.0, 1.0);
   gl_FragColor = vec4(color * (1.0 - phase) * v, 1);
 }
 `
 class Particle {
   mesh: THREE.Points
-  uniforms: { phase: { value: number }, color: { value: THREE.Color } }
-  constructor(x: number, z: number, color: number) {
+  uniforms: {
+    phase: { value: number },
+    color: { value: THREE.Color },
+    destination: { value: THREE.Vector3 }
+  }
+  constructor(x: number, z: number, color: number, dst: Point3D) {
     this.uniforms = {
       phase: { value: 0 },
+      destination: { value: new THREE.Vector3(dst.x - x, dst.y, dst.z - z) },
       color: { value: new THREE.Color(color) }
     }
     this.mesh = new THREE.Points(
@@ -400,7 +407,7 @@ class Particle {
     const positions: number[] = []
     for (let i = 0; i < 16; i++) {
       const p = randomDirection()
-      const r = 0.1
+      const r = 0.25
       positions.push(r * p.x, r * p.y, r * p.z)
     }
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
@@ -417,12 +424,12 @@ export class FishShrimpCloud {
   maxCount = 64
   constructor(public hitFunc: HitFunc) {}
   effects: { phase: number; particle: Particle }[] = []
-  addEffect(x: number, z: number, color: number) {
-    const particle = new Particle(x, z, color)
+  addEffect(x: number, z: number, color: number, dst: Point3D) {
+    const particle = new Particle(x, z, color, dst)
     this.effects.push({ phase: 0, particle })
     this.scene.add(particle.mesh)
   }
-  update(center: Point3D, dt: number, hitMap: HitMap, tap: { x: number; z: number } | null) {
+  update(center: Point3D, dst: Point3D, dt: number, hitMap: HitMap, tap: { x: number; z: number } | null) {
     const { mobs, scene, updateRadius, despawnRadius } = this
     const destroys: (Fish | Shrimp)[] = []
     const tapR2 = 0.75 ** 2
@@ -434,7 +441,7 @@ export class FishShrimpCloud {
         const { x, z } = mob.position
         if (hitMap.hitTest(x, z) || (tap && (x - tap.x) ** 2 + (z - tap.z) ** 2 < tapR2)) {
           destroys.push(mob)
-          this.addEffect(x, z, mob instanceof Fish ? 0x8888ff : 0xff8888)
+          this.addEffect(x, z, mob instanceof Fish ? 0x8888ff : 0xff8888, dst)
         }
       } else if (dist > despawnRadius || Math.random() < 0.1 * dt) {
         destroys.push(mob)

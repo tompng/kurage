@@ -475,8 +475,8 @@ export class Jelly {
     })
     return [...ups.reverse(), ...downs.slice(1, downs.length - 1)]
   }
-  collectPoints(add: (points: Point3D[]) => void) {
-    add(this.samplePoints(16, [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]))
+  collectPoints(add: (points: Point3D[]) => void, includeBody = false) {
+    if (includeBody) add(this.samplePoints(16, [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]))
     for (const string of this.strings) add(string.string.points)
   }
 }
