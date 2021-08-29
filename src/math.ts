@@ -135,7 +135,7 @@ export class Matrix3 {
 }
 
 export function randomDirection(r = 1): Point3D {
-  const z = Math.random()
+  const z = 2 * Math.random() - 1
   const th = 2 * Math.PI * Math.random()
   const xyr = Math.sqrt(1 - z * z)
   return {

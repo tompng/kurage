@@ -1,6 +1,7 @@
 import { distance, Point3D, randomDirection } from './math'
 import * as THREE from 'three'
 import { Mesh } from 'three'
+import type { HitMap } from './hitmap'
 
 type XY = [number, number]
 type XYZ = [number, number, number]
@@ -353,37 +354,138 @@ class Fish {
   }
 }
 
+const particleVertexShader = `
+uniform float phase;
+void main() {
+  gl_PointSize = 8.0;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(phase * position, 1);
+}
+
+`
+const particleFragmentShader = `
+uniform float phase;
+uniform vec3 color;
+void main() {
+  vec2 xy = gl_PointCoord * 2.0 - 1.0;
+  float v = max(1.0 - dot(xy, xy), 0.0);
+  gl_FragColor = vec4(color * (1.0 - phase) * v, 1);
+}
+`
+class Particle {
+  mesh: THREE.Points
+  uniforms: { phase: { value: number }, color: { value: THREE.Color } }
+  constructor(x: number, z: number, color: number) {
+    this.uniforms = {
+      phase: { value: 0 },
+      color: { value: new THREE.Color(color) }
+    }
+    this.mesh = new THREE.Points(
+      Particle.geometry(),
+      new THREE.ShaderMaterial({
+        uniforms: this.uniforms,
+        fragmentShader: particleFragmentShader,
+        vertexShader: particleVertexShader,
+        depthTest: false,
+        blending: THREE.AdditiveBlending
+      })
+    )
+    this.mesh.position.set(x, 0, z)
+    const dir = randomDirection()
+    this.mesh.setRotationFromAxisAngle(new THREE.Vector3(dir.x, dir.y, dir.z), 2 * Math.PI * Math.random())
+  }
+  static generatedGeometry: THREE.BufferGeometry | null = null
+  static geometry() {
+    if (this.generatedGeometry) return this.generatedGeometry
+    const geometry = this.generatedGeometry = new THREE.BufferGeometry()
+    const positions: number[] = []
+    for (let i = 0; i < 16; i++) {
+      const p = randomDirection()
+      const r = 0.1
+      positions.push(r * p.x, r * p.y, r * p.z)
+    }
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
+    return geometry
+  }
+}
+
 export class FishShrimpCloud {
   scene = new THREE.Scene()
-  updateRadius = 4
+  updateRadius = 5
   despawnRadius = 8
   mobs = new Set<Fish | Shrimp>()
+  timer = 0
+  maxCount = 64
   constructor(public hitFunc: HitFunc) {}
-  update(center: Point3D, dt: number) {
+  effects: { phase: number; particle: Particle }[] = []
+  addEffect(x: number, z: number, color: number) {
+    const particle = new Particle(x, z, color)
+    this.effects.push({ phase: 0, particle })
+    this.scene.add(particle.mesh)
+  }
+  update(center: Point3D, dt: number, hitMap: HitMap, tap: { x: number; z: number } | null) {
     const { mobs, scene, updateRadius, despawnRadius } = this
     const destroys: (Fish | Shrimp)[] = []
+    const tapR2 = 0.75 ** 2
     mobs.forEach(mob => {
       const dist = distance(mob.position, center)
       if (dist < updateRadius) {
         mob.update(dt, this.hitFunc)
         mob.updateForRender()
+        const { x, z } = mob.position
+        if (hitMap.hitTest(x, z) || (tap && (x - tap.x) ** 2 + (z - tap.z) ** 2 < tapR2)) {
+          destroys.push(mob)
+          this.addEffect(x, z, mob instanceof Fish ? 0x8888ff : 0xff8888)
+        }
+      } else if (dist > despawnRadius || Math.random() < 0.1 * dt) {
+        destroys.push(mob)
       }
-      if (dist > despawnRadius) destroys.push(mob)
     })
     destroys.forEach(mob => {
       scene.remove(mob.mesh)
       mobs.delete(mob)
     })
+    this.timer += dt
+    if (this.timer > 2 && this.mobs.size < this.maxCount) {
+      const x = center.x - despawnRadius + 2 * despawnRadius * Math.random()
+      const z = center.z - despawnRadius + 2 * despawnRadius * Math.random()
+      const r2 = (x - center.x) ** 2 + (z - center.z) ** 2
+      if (updateRadius ** 2 < r2 && r2 < despawnRadius ** 2) {
+        const mode = Math.random() < 0.5
+        const n = 2 + Math.random() * 10
+        for (let i = 0; i < n; i++) {
+          const rnd = randomDirection()
+          const p = { x: x + rnd.x, y: rnd.y / 4, z: z + rnd.z }
+          const r2 = (p.x - center.x) ** 2 + (p.z - center.z) ** 2
+          if (updateRadius ** 2 < r2) {
+            if (mode) {
+              this.spawnFish(p)
+            } else {
+              this.spawnShrimp(p)
+            }
+          }
+        }
+      }
+    }
+    for (const e of this.effects) {
+      e.phase += 4 * dt
+      e.particle.uniforms.phase.value = e.phase
+    }
+    while (this.effects.length && this.effects[0].phase > 1) {
+      const e = this.effects.shift()!
+      this.scene.remove(e.particle.mesh)
+    }
   }
   spawnFish(position: Point3D) {
     if (this.hitFunc(position.x, position.z)) return
     const fish = new Fish(position)
+    fish.updateForRender()
     this.scene.add(fish.mesh)
     this.mobs.add(fish)
   }
   spawnShrimp(position: Point3D) {
     if (this.hitFunc(position.x, position.z)) return
     const shrimp = new Shrimp(position)
+    shrimp.updateForRender()
     this.scene.add(shrimp.mesh)
     this.mobs.add(shrimp)
   }

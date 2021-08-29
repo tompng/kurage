@@ -8,7 +8,9 @@ import { OceanDust, OceanDark, OceanSurface, OceanTerrain } from './ocean'
 import textureUrl from './images/jelly/0.jpg'
 import { Terrain, test } from './terrain'
 import { FishShrimpCloud, createShrimpGeometryMaterial, createFishGeometryMaterial } from './fish_shrimp'
+import { HitMap } from './hitmap'
 
+const hitMap = new HitMap(64, 4)
 const terrain = new Terrain()
 const texture = new THREE.TextureLoader().load(textureUrl)
 texture.wrapS = THREE.ClampToEdgeWrapping
@@ -25,7 +27,7 @@ for (let i = 0; i < 10; i++) {
     z: -0.1 - Math.random()
   })
 }
-assignGlobal({ fsCloud })
+assignGlobal({ fsCloud, hitMap })
 
 const stringRenderer = new BezierStringRenderer(4, 5)
 function requestWhiteBlueString(string: String3D) {
@@ -84,7 +86,8 @@ const touch = {
   start: { x: 0, y: 0 },
   end: { x: 0, y: 0 },
   th: Math.PI,
-  taps: [] as { x: number, y: number, time: number }[]
+  taps: [] as { x: number, y: number, time: number }[],
+  gpos: null as Point3D | null
 }
 assignGlobal({ touch })
 const player = {
@@ -109,19 +112,13 @@ document.addEventListener('touchstart', e => {
 window.onpointerdown = e => {
   e.preventDefault()
   const p = getTouchPoint(e)
-  if (Math.hypot(p.x, p.y) < 1 / 3) {
+  if (Math.hypot(p.x, p.y) < 0.4) {
     touch.id = e.pointerId
     touch.start = p
     touch.end = p
     touch.lastActiveTime = null
   } else {
-    const g = screenToGlobal(p)
-    // addJelly(g.x, g.z)
-    const spawn = Math.random() < 0.5 ? 'spawnFish' : 'spawnShrimp'
-    for (let i = 0; i < 10; i++) {
-      const { x, y, z } = randomDirection()
-      fsCloud[spawn]({ x: x + g.x, y, z: z + g.z })
-    }
+    touch.gpos = screenToGlobal(p)
     touch.taps.push({ ...p, time: new Date().getTime() })
   }
 }
@@ -280,7 +277,6 @@ function frame() {
   } else if (stopAt) {
     dt = Math.max(1 - (performance.now() - stopAt) / 1000, 0) * 0.01
   }
-  fsCloud.update(centerPosition, dt)
   oceanSurface.update(dt)
   centerPosition.update(jelly.position, dt)
   const currentDir = normalize(vectorSub(jelly.transformLocalPoint({ x: 0, y: 0, z: -1 }), jelly.position))
@@ -348,11 +344,9 @@ function frame() {
     jelly.momentum.z = jelly.momentum.z * mscale + rot.z * theta
   }
   const polygon = jelly.boundingPolygon()
-  let hit = false
   polygon.forEach(p => {
     const norm = terrain.hitNormal(p.x, p.z)
     if (!norm) return
-    hit = true
     let vdot = norm.x * player.vx + norm.z * player.vz
     if (vdot > 0) vdot /= 2
     player.vx = player.vx - norm.x * vdot + 2 * norm.x * dt
@@ -367,6 +361,14 @@ function frame() {
   jelly.position.y = 0
   jelly.position.z = player.z
   jelly.currentBoundingPolygon = null
+
+  hitMap.clear()
+  hitMap.center.x = centerPosition.x
+  hitMap.center.z = centerPosition.z
+  jelly.collectPoints(ps => hitMap.addPoints(ps))
+  fsCloud.update(centerPosition, dt, hitMap, touch.gpos)
+  touch.gpos = null
+
   render()
   requestAnimationFrame(frame)
 }

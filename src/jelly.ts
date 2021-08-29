@@ -449,17 +449,20 @@ export class Jelly {
     })
   }
   currentBoundingPolygon: BoundingPolygon | null = null
-  boundingPolygon(): BoundingPolygon {
-    if (this.currentBoundingPolygon) return this.currentBoundingPolygon
+  samplePoints(thn = 8, rs = [0.2, 0.45, 0.75, 1]) {
     const gpoints: Point3D[] = []
-    for (let i = 0; i < 8; i++) {
-      const th = 2 * Math.PI * i / 8
+    for (let i = 0; i < thn; i++) {
+      const th = 2 * Math.PI * i / thn
       const cos = Math.cos(th), sin = Math.sin(th)
-      ;[0.2, 0.45, 0.75, 1].forEach(r => {
+      rs.forEach(r => {
         gpoints.push({ x: r * cos, y: r * sin, z: 1 - Math.sqrt(1 - r * r) })
       })
     }
-    const points = gpoints.map(p => this.transformGridPoint(p)).sort((a, b) => a.x - b.x)
+    return gpoints.map(p => this.transformGridPoint(p)).sort((a, b) => a.x - b.x)
+  }
+  boundingPolygon(): BoundingPolygon {
+    if (this.currentBoundingPolygon) return this.currentBoundingPolygon
+    const points = this.samplePoints()
     const ups: XZ[] = []
     const downs: XZ[] = []
     points.forEach(p => {
@@ -471,6 +474,10 @@ export class Jelly {
       if (!dlast || dlast.x !== p.x || dlast.z !== p.z) downs.push(p)
     })
     return [...ups.reverse(), ...downs.slice(1, downs.length - 1)]
+  }
+  collectPoints(add: (points: Point3D[]) => void) {
+    add(this.samplePoints(16, [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]))
+    for (const string of this.strings) add(string.string.points)
   }
 }
 
