@@ -306,7 +306,8 @@ const centerPosition = new SmoothPoint3D(jelly.position, 0.5)
 function render() {
   const size = new THREE.Vector2()
   renderer.getSize(size)
-  world.renderToOffScreen(renderer, { width: size.x, height: size.y }, camera)
+  const ratio = renderer.getPixelRatio()
+  world.renderToOffScreen(renderer, { width: size.x * ratio, height: size.y * ratio }, camera)
   world.renderToScreen(renderer)
   renderUI()
 }
