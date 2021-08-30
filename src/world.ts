@@ -20,7 +20,7 @@ export class World {
   targetRenderScene = new THREE.Scene()
   targetRenderCamera = new THREE.Camera()
   centerPosition: SmoothPoint3D
-  constructor(public jelly: Jelly) {
+  constructor(public stringRenderer: BezierStringRenderer, public jelly: Jelly) {
     this.centerPosition = new SmoothPoint3D(jelly.position, 0.5)
     const targetRenderMesh = new THREE.Mesh(new THREE.PlaneBufferGeometry(), new THREE.MeshBasicMaterial({ map: this.renderTarget.texture }))
     targetRenderMesh.scale.x = targetRenderMesh.scale.y = 2
@@ -37,7 +37,6 @@ export class World {
     th: Math.PI,
     dstTheta: Math.PI
   }
-  stringRenderer = new BezierStringRenderer(4, 5)
 
   update(dt: number, touchPosition: Point3D | null) {
     const { player, jelly } = this

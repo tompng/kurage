@@ -5,7 +5,9 @@ import { Point3D, normalize, scale as vectorScale, add as vectorAdd, sub as vect
 import { RibbonRenderer } from './ribbon_mesh'
 import textureUrl from './images/jelly/0.jpg'
 import { World } from './world'
+import { BezierStringRenderer } from './string_mesh'
 
+const stringRenderer = new BezierStringRenderer()
 const texture = new THREE.TextureLoader().load(textureUrl)
 texture.wrapS = THREE.ClampToEdgeWrapping
 texture.wrapT = THREE.ClampToEdgeWrapping
@@ -13,15 +15,16 @@ texture.generateMipmaps = true
 texture.needsUpdate = true
 const jelly = new Jelly(6, texture)
 jelly.setPosition({ x: 0, y: 0, z: -2 }, { x: -1, y: 0, z: 0.1 })
-const world = new World(jelly)
+const world = new World(stringRenderer, jelly)
 const player = world.player
-const stringRenderer = world.stringRenderer
 
+const whiteBlueStringProfile = stringRenderer.getPlainProfile({ l: 4, r: 5 }, 0.015, new THREE.Color(0xBFBFFF))
 function requestWhiteBlueString(string: String3D) {
-  stringRenderer.request(0.015, 0xBFBFFF, string.bezierSegments())
+  whiteBlueStringProfile.request(string.bezierSegments())
 }
+const thinStringProfile = stringRenderer.getPlainProfile({ l: 4, r: 5 }, 0.008, new THREE.Color(0xBFBFFF))
 function requestThinString(string: String3D) {
-  stringRenderer.request(0.008, 0xBFBFFF, string.bezierSegments())
+  thinStringProfile.request(string.bezierSegments())
 }
 
 function assignGlobal(data: Record<string, any>) {
@@ -139,11 +142,12 @@ function renderRibbon(string: String3D, ribbon: Ribbon) {
 
 const jellies: Jelly[] = []
 
+const varyingStringProfile = stringRenderer.getVaryingProfile({ l: 4, r: 5 }, 0.015)
 function addJelly(x: number, z: number) {
   const jelly = new Jelly(4, texture, 0.2 + 0.8 * Math.random())
   jelly.setPosition({ x, y: 0, z })
   function renderString(string: String3D) {
-    stringRenderer.varyingRequest(0.015, string.bezierSegmentsWithColor({ r: 4, g: 0, b: 0 }, { r: 3, g: 3, b: 4 }))
+    varyingStringProfile.request(string.bezierSegmentsWithColor({ r: 4, g: 0, b: 0 }, { r: 3, g: 3, b: 4 }))
   }
   for (let i = 0; i < 4; i++) {
     const th = 2 * Math.PI * i / 4 + 1
@@ -216,7 +220,7 @@ for (let i = 0; i < 128; i++) {
 
 
 function requestHanagasaString(string: String3D) {
-  stringRenderer.varyingRequest(0.015, string.bezierSegmentsWithColor({ r: 0.4, g: 0.5, b: 0.5 }, { r: 0.6, g: 0, b: 0 }))
+  varyingStringProfile.request(string.bezierSegmentsWithColor({ r: 0.4, g: 0.5, b: 0.5 }, { r: 0.6, g: 0, b: 0 }))
 }
 for (let i = 0; i < 64; i++) {
   const th = 2 * Math.PI * i / 64
@@ -275,10 +279,9 @@ const clovers = [0, 1, 2, 3].map(i => {
   return line
 })
 
+const cloverStringProfile = stringRenderer.getPlainProfile({ l: 6, r: 12 }, 0.03, new THREE.Color(0xff8844))
 function renderCloverAttachment(positions: Point3D[]) {
-  stringRenderer.request(
-    0.03,
-    0xff8844,
+  cloverStringProfile.request(
     [...new Array(positions.length - 3)].map((_, i) => {
       const a = positions[i]
       const b = positions[i + 1]
