@@ -6,11 +6,32 @@ import { RibbonRenderer } from './ribbon_mesh'
 import textureUrl from './images/jelly/0.jpg'
 import { World } from './world'
 import { BezierStringRenderer } from './string_mesh'
-import { curvePath, closedCurvePath } from './curve_path'
 import { CanvasIcon, CloseMenuIcon } from './icon'
+import { ComponentSwitcher } from './component_switcher'
 
+const renderOnResize: (() => void)[] = []
 const mainDiv = document.querySelector<HTMLDivElement>('#main')!
-let state: 'book' | 'gear' | 'map' | null
+const component = document.createElement('div')
+component.textContent = 'to be continued'
+component.style.cssText = `
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  font-size: 8vmin;
+  color: white;
+  background: rgba(180, 100, 100, 0.8);
+`
+const menuComponent = new ComponentSwitcher(mainDiv)
+
+const menuState = {
+  component: null as any,
+  dir: -1 as 1 | -1,
+  phase: 0
+}
+
 const b1 = new CanvasIcon('book')
 const b2 = new CanvasIcon('tshirt')
 const b3 = new CanvasIcon('map')
@@ -19,14 +40,19 @@ const menuclose = new CloseMenuIcon()
   const div = document.createElement('div')
   mainDiv.appendChild(div)
   div.appendChild(b.canvas)
-  div.className = 'button ' + ['book', 'gear', 'map', 'close'][i]
+  const type = ['book', 'gear', 'map'][i]
+  div.className = 'button ' + type
   div.style.position = 'absolute'
   b.render()
   b.canvas.onpointerdown = e => {
-    ;(window as any).startAt = null
-    ;(window as any).stopAt = performance.now()
+    if (!(window as any).stopAt) {
+      ;(window as any).startAt = null
+      ;(window as any).stopAt = performance.now()-10000
+    }
+    component.innerHTML = type + '<br>' + '←to be continued'
     e.stopPropagation()
     menuclose.activate()
+    menuComponent.show(component)
   }
 })
 menuclose.canvas.className = 'menuclose'
@@ -34,8 +60,17 @@ mainDiv.appendChild(menuclose.canvas)
 menuclose.render()
 menuclose.onClick = () => {
   menuclose.deactivate()
+  menuComponent.hide()
+  ;(window as any).stopAt = null
   ;(window as any).startAt = performance.now()
 }
+
+renderOnResize.push(() => {
+  b1.render()
+  b2.render()
+  b3.render()
+  menuclose.render()
+})
 
 const stringRenderer = new BezierStringRenderer()
 const texture = new THREE.TextureLoader().load(textureUrl)
@@ -69,6 +104,7 @@ renderer.domElement.style.width = uiCanvas.style.width = '100%'
 renderer.domElement.style.height = uiCanvas.style.height = '100%'
 mainDiv.appendChild(renderer.domElement)
 mainDiv.appendChild(uiCanvas)
+
 function setSize(){
   const minAspect = 3 / 5
   const maxAspect = 3 / 4
@@ -92,6 +128,7 @@ function setSize(){
   mainDiv.style.height = `${height}px`
   mainDiv.style.left = `${(innerWidth - width) / 2}px`
   mainDiv.style.top = `${(innerHeight - height) / 2}px`
+  for (const f of renderOnResize) f()
 }
 setSize()
 window.onresize = setSize
@@ -120,6 +157,7 @@ document.addEventListener('touchstart', e => {
 }, { passive: false })
 window.onpointerdown = e => {
   e.preventDefault()
+  if (menuState.component) return
   const p = getTouchPoint(e)
   if (Math.hypot(p.x, p.y) < 0.4) {
     touch.id = e.pointerId
@@ -283,7 +321,7 @@ function frame() {
   }
   world.update(dt, touch.gpos)
   touch.gpos = null
-  render()
+  if (dt !== 0) render()
   requestAnimationFrame(frame)
 }
 requestAnimationFrame(frame)
@@ -401,3 +439,5 @@ function renderUI() {
   })
   uiCtx.restore()
 }
+
+renderOnResize.push(render)
