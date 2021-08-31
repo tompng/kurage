@@ -6,6 +6,39 @@ import { RibbonRenderer } from './ribbon_mesh'
 import textureUrl from './images/jelly/0.jpg'
 import { World } from './world'
 import { BezierStringRenderer } from './string_mesh'
+import { curvePath, closedCurvePath } from './curve_path'
+import { CanvasIcon, CloseMenuIcon } from './icon'
+// test()
+
+let state: 'book' | 'gear' | 'map' | null
+const b1 = new CanvasIcon('book')
+const b2 = new CanvasIcon('tshirt')
+const b3 = new CanvasIcon('map')
+const menuclose = new CloseMenuIcon()
+;[b1, b2, b3].forEach((b, i) => {
+  const div = document.createElement('div')
+  document.body.appendChild(div)
+  div.appendChild(b.canvas)
+  div.className = 'button ' + ['book', 'gear', 'map', 'close'][i]
+  div.style.position = 'absolute'
+  b.render()
+  b.canvas.onpointerdown = e => {
+    ;(window as any).startAt = null
+    ;(window as any).stopAt = performance.now()
+    e.stopPropagation()
+    menuclose.activate()
+  }
+})
+menuclose.canvas.className = 'menuclose'
+document.body.appendChild(menuclose.canvas)
+menuclose.render()
+menuclose.onClick = () => {
+  menuclose.deactivate()
+  ;(window as any).startAt = performance.now()
+}
+
+
+// throw 'err'
 
 const stringRenderer = new BezierStringRenderer()
 const texture = new THREE.TextureLoader().load(textureUrl)

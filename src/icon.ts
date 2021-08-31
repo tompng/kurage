@@ -122,7 +122,15 @@ export class CanvasIcon {
 
 export class CloseMenuIcon {
   canvas = document.createElement('canvas')
-  phase = 1 // 0: jelly, 1: close
+  phase = 0 // 0: jelly, 1: close
+  onClick: (() => void) | null = null
+  constructor() {
+    this.canvas.onpointerdown = e => {
+      if (this.phase < 0.5) return
+      e.stopPropagation()
+      this.onClick?.()
+    }
+  }
   render() {
     if (this.phase === 1) {
       this.canvas.setAttribute('data-clickable', 'true')
@@ -155,13 +163,15 @@ export class CloseMenuIcon {
       const u = t * (1 - t) / 8
       jellyPoints.push([tx * (1 - u) + u * rndx, ty * (1 - u) + u * rndy])
     }
+    ctx.globalAlpha = 0.5 + 0.5 * t
     ctx.beginPath()
     curvePath(ctx, jellyPoints, true)
     if (t > 0.5) {
-      ctx.globalAlpha = t - 0.5
+      ctx.save()
+      ctx.globalAlpha *= t - 0.5
       ctx.fillStyle = 'gray'
       ctx.fill()
-      ctx.globalAlpha = 1
+      ctx.restore()
     }
     ctx.stroke()
     ctx.beginPath()
@@ -185,14 +195,40 @@ export class CloseMenuIcon {
     stringPath(ctx, -1)
     stringPath(ctx, 1)
     ctx.stroke()
-    const a = 1 - t
+    ctx.beginPath()
     if (t < 0.5) {
-      ctx.globalAlpha = 1 - 2 * t
+      ctx.globalAlpha *= 1 - 2 * t
       const points: [number, number][] = []
       stringPath(ctx, 0)
       ctx.stroke()
     }
     ctx.restore()
+  }
+  timer: number | null = null
+  dir: 1 | -1 = 1
+  activate() {
+    this.dir = 1
+    this.animate()
+  }
+  deactivate() {
+    this.dir = -1
+    this.animate()
+  }
+  prevTime = 0
+  animate() {
+    if (this.timer) return
+    if (this.dir === 1 && this.phase === 1) return
+    if (this.dir === -1 && this.phase === 0) return
+    this.prevTime = performance.now()
+    this.timer = requestAnimationFrame(() => {
+      this.timer = null
+      const time = performance.now()
+      const dt = (time - this.prevTime) / 1000
+      this.prevTime = time
+      this.phase = Math.min(Math.max(0, this.phase + this.dir * dt), 1)
+      this.render()
+      this.animate()
+    })
   }
 }
 
