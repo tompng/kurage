@@ -8,8 +8,8 @@ import { World } from './world'
 import { BezierStringRenderer } from './string_mesh'
 import { curvePath, closedCurvePath } from './curve_path'
 import { CanvasIcon, CloseMenuIcon } from './icon'
-// test()
 
+const mainDiv = document.querySelector<HTMLDivElement>('#main')!
 let state: 'book' | 'gear' | 'map' | null
 const b1 = new CanvasIcon('book')
 const b2 = new CanvasIcon('tshirt')
@@ -17,7 +17,7 @@ const b3 = new CanvasIcon('map')
 const menuclose = new CloseMenuIcon()
 ;[b1, b2, b3].forEach((b, i) => {
   const div = document.createElement('div')
-  document.body.appendChild(div)
+  mainDiv.appendChild(div)
   div.appendChild(b.canvas)
   div.className = 'button ' + ['book', 'gear', 'map', 'close'][i]
   div.style.position = 'absolute'
@@ -30,15 +30,12 @@ const menuclose = new CloseMenuIcon()
   }
 })
 menuclose.canvas.className = 'menuclose'
-document.body.appendChild(menuclose.canvas)
+mainDiv.appendChild(menuclose.canvas)
 menuclose.render()
 menuclose.onClick = () => {
   menuclose.deactivate()
   ;(window as any).startAt = performance.now()
 }
-
-
-// throw 'err'
 
 const stringRenderer = new BezierStringRenderer()
 const texture = new THREE.TextureLoader().load(textureUrl)
@@ -68,8 +65,10 @@ const shortFov = 30
 let camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.1, 100)
 const uiCanvas = document.createElement('canvas')
 const uiCtx = uiCanvas.getContext('2d')!
-document.body.appendChild(renderer.domElement)
-document.body.appendChild(uiCanvas)
+renderer.domElement.style.width = uiCanvas.style.width = '100%'
+renderer.domElement.style.height = uiCanvas.style.height = '100%'
+mainDiv.appendChild(renderer.domElement)
+mainDiv.appendChild(uiCanvas)
 function setSize(){
   const minAspect = 3 / 5
   const maxAspect = 3 / 4
@@ -87,13 +86,12 @@ function setSize(){
   renderer.setPixelRatio(devicePixelRatio)
   renderer.setSize(width, height)
   camera = new THREE.PerspectiveCamera(fov, width / height, 0.1, 100)
-  const dom = renderer.domElement
   uiCanvas.width = width * devicePixelRatio
   uiCanvas.height = height * devicePixelRatio
-  uiCanvas.style.width = `${width}px`
-  uiCanvas.style.height = `${height}px`
-  dom.style.left = uiCanvas.style.left = `${(innerWidth - width) / 2}px`
-  dom.style.top = uiCanvas.style.top = `${(innerHeight - height) / 2}px`
+  mainDiv.style.width = `${width}px`
+  mainDiv.style.height = `${height}px`
+  mainDiv.style.left = `${(innerWidth - width) / 2}px`
+  mainDiv.style.top = `${(innerHeight - height) / 2}px`
 }
 setSize()
 window.onresize = setSize
@@ -108,8 +106,8 @@ const touch = {
 }
 assignGlobal({ touch })
 function getTouchPoint(e: PointerEvent) {
-  const w = renderer.domElement.offsetWidth
-  const h = renderer.domElement.offsetHeight
+  const w = mainDiv.offsetWidth
+  const h = mainDiv.offsetHeight
   const size = Math.min(w, h)
   return {
     x: (2 * e.pageX - innerWidth) / size,
