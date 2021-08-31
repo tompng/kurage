@@ -1,3 +1,5 @@
+import { closedCurvePath } from './curve_path'
+
 function createCanvas(size: number) {
   const canvas = document.createElement('canvas')
   canvas.width = canvas.height = size
@@ -11,42 +13,6 @@ function createCanvas(size: number) {
 }
 
 const backBGColor = '#222'
-
-function smoothBezierParams(values: number[]) {
-  const n = values.length
-  const diffs = values.map((_, i) => 3 * (values[(i + 1) % n] - values[(i + n - 1) % n]))
-  let sum = 0
-  const a = -2 + Math.sqrt(3)
-  diffs.forEach(v => sum = sum * a + v )
-  const b = 1 / (1 - a ** n)
-  const scale = 1 / (4 + 2 * a) / 3
-  sum *= b
-  const params = diffs.map(v => sum = sum * a + v)
-  let rsum = 0
-  for (let i = n - 1; i >= 0; i--) rsum = rsum * a + diffs[i]
-  rsum *= b
-  for (let i = n - 1; i >= 0; i--) {
-    rsum = rsum * a + diffs[i]
-    params[i] = (params[i] + rsum - diffs[i]) * scale
-  }
-  return params
-}
-function curvePath(ctx: CanvasRenderingContext2D, points: { x: number; y: number }[]) {
-  const xparams = smoothBezierParams(points.map(p => p.x))
-  const yparams = smoothBezierParams(points.map(p => p.y))
-  ctx.moveTo(points[0].x, points[0].y)
-  for (let i = 0; i < points.length; i++) {
-    const j = (i + 1) % points.length
-    ctx.bezierCurveTo(
-      points[i].x + xparams[i],
-      points[i].y + yparams[i],
-      points[j].x - xparams[j],
-      points[j].y - yparams[j],
-      points[j].x,
-      points[j].y
-    )
-  }
-}
 
 function plainImage(size: number, color = '#666') {
   const [canvas, ctx] = createCanvas(size)
@@ -129,7 +95,7 @@ export function spottedImage(size: number, props: { n: number; rmin: number; rma
       return { x: x + rr * Math.cos(th), y: y + rr * Math.sin(th) }
     })
     ctx.beginPath()
-    curvePath(ctx, points)
+    closedCurvePath(ctx, points)
     ctx.closePath()
     ctx.strokeStyle = 'white'
     ctx.lineWidth = donut * 2
@@ -139,7 +105,7 @@ export function spottedImage(size: number, props: { n: number; rmin: number; rma
     if (r > donut) {
       ctx.beginPath()
       const scale = (r - donut) / r
-      curvePath(ctx, points.map(p => ({ x: x + (p.x - x) * scale, y: y + (p.y - y) * scale, })))
+      closedCurvePath(ctx, points.map(p => ({ x: x + (p.x - x) * scale, y: y + (p.y - y) * scale, })))
       ctx.arc(x, y, r - donut, 0, 2 * Math.PI)
       ctx.filter = `blur(${size * donut / 8}px)`;
       ctx.fillStyle = background
@@ -368,5 +334,4 @@ export function preview(canvases = generate()) {
       }, 'image/jpeg', 0.95)
     }
   })
-
 }
