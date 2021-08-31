@@ -9,5 +9,59 @@ body {
 canvas {
   position: absolute;
 }
+.button {
+  position: absolute;
+  width: 12vmin;
+  height: 12vmin;
+  background-color: rgba(128, 128, 128, 0.2);
+  border-radius: 50%;
+  border: 5vmin solid none;
+  opacity: 0.5;
+  z-index: 9999;
+  cursor: hover;
+}
+.button:hover {
+  opacity: 1
+}
+.button:active {
+  background-color: rgb(128, 128, 128, 0.5);
+  opacity: 1
+}
+.button canvas {
+  position: absolute;
+  left: 12.5%;
+  top: 12.5%;
+  width: 75%;
+  height: 75%;
+}
+.button.map {
+  right: 13vmin;
+  bottom: 13vmin;
+}
+.button.gear {
+  right: 18vmin;
+  bottom: 1vmin;
+}
+.button.book {
+  right: 1vmin;
+  bottom: 18vmin;
+}
+.button.close {
+  right: 1vmin;
+  bottom: 1vmin;
+}
+.menuclose {
+  position:absolute;
+  z-index: 9999;
+  width: 16vmin;
+  height: 16vmin;
+  right: 0;
+  bottom: 0;
+  border-radius: 50%;
+  opacity: 0.5;
+}
+.menuclose[data-clickable]{cursor: pointer;}
+.menuclose[data-clickable]:hover{opacity: 0.8;}
+.menuclose[data-clickable]:active{opacity: 1;}
 </style>
 <body><script src="dist/index.js"></script></body>
