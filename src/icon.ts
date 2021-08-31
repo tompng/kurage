@@ -73,6 +73,47 @@ function mapPath(ctx: CanvasRenderingContext2D) {
     [-0.22, -0.05],
   ])
 }
+
+function crossPath(ctx: CanvasRenderingContext2D) {
+  const s = 0.7
+  ctx.moveTo(-s, -s)
+  ctx.lineTo(s, s)
+  ctx.moveTo(-s, s)
+  ctx.lineTo(s, -s)
+}
+
+const icons = {
+  map: mapPath,
+  tshirt: tshirtPath,
+  book: bookPath,
+  close: crossPath
+}
+export class CanvasIcon {
+  canvas: HTMLCanvasElement
+  renderPath: (ctx: CanvasRenderingContext2D) => void
+  constructor(icon: ((ctx: CanvasRenderingContext2D) => void) | keyof typeof icons) {
+    this.canvas = document.createElement('canvas')
+    this.renderPath = typeof icon === 'function' ? icon : icons[icon]
+  }
+  render() {
+    const { canvas } = this
+    const ratio = window.devicePixelRatio
+    const pixelSize = this.canvas.offsetWidth * ratio
+    this.canvas.width = this.canvas.height = pixelSize
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    ctx.save()
+    ctx.lineCap = ctx.lineJoin = 'round'
+    ctx.scale(pixelSize / 2, pixelSize / 2)
+    ctx.translate(1, 1)
+    ctx.lineWidth = 1 / 8
+    this.renderPath(ctx)
+    ctx.strokeStyle = 'white'
+    ctx.stroke()
+    ctx.restore()
+  }
+}
+
 export function test() {
   const canvas = document.createElement('canvas')
   canvas.width = canvas.height = 512
