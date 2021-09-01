@@ -26,6 +26,7 @@ export function initialize() {
   }
   function changeMode(m: number | null) {
     mode = m
+    const selectors = ['.gear-select-head', '.gear-select-body', '.gear-select-string', '.gear-select-ribbon']
     buttons.forEach((el, i) => {
       const className = 'active'
       if (m === i) {
@@ -34,6 +35,12 @@ export function initialize() {
         el.classList.remove(className)
       }
     })
+    document.querySelectorAll<HTMLDivElement>('.gear-select').forEach(el => {
+      el.style.display = 'none'
+    })
+    if (typeof mode === 'number') {
+      document.querySelector<HTMLDivElement>(selectors[mode])!.style.display = ''
+    }
   }
   buttons.forEach((el, i) => {
     el.onpointerdown = () => {

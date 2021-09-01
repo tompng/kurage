@@ -156,9 +156,9 @@ canvas {
   left: 0;
   bottom: 0;
   width: 100%;
-  height: 20vmin;
+  height: 0;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-end;
 }
 .gear-type svg {
   width: 8vmin;
@@ -204,15 +204,39 @@ canvas {
   </div>
   <div id='gear'>
     <div class='component-square'>
-      <div class='gear-select'>
+      <div class='gear-select gear-select-head' style='display:none'>
         <div class='gear-select-row'>
-          <div class='gear-item gear-item-2 active'></div>
-          <div class='gear-item gear-item-2'></div>
+          <div class='gear-item gear-item-3 active'></div>
+          <div class='gear-item gear-item-3'></div>
+          <div class='gear-item gear-item-3'></div>
+        </div>
+      </div>
+      <div class='gear-select gear-select-body' style='display:none'>
+        <div class='gear-select-row'>
+          <div class='gear-item gear-item-3 active'></div>
+          <div class='gear-item gear-item-3'></div>
+          <div class='gear-item gear-item-3'></div>
         </div>
         <div class='gear-select-row'>
           <div class='gear-item gear-item-3'></div>
           <div class='gear-item gear-item-3'></div>
           <div class='gear-item gear-item-3'></div>
+        </div>
+      </div>
+      <div class='gear-select gear-select-string' style='display:none'>
+        <div class='gear-select-row'>
+          <div class='gear-item gear-item-2 active'></div>
+          <div class='gear-item gear-item-2'></div>
+        </div>
+      </div>
+      <div class='gear-select gear-select-ribbon' style='display:none'>
+        <div class='gear-select-row'>
+          <div class='gear-item gear-item-2 active'></div>
+          <div class='gear-item gear-item-2'></div>
+        </div>
+        <div class='gear-select-row'>
+          <div class='gear-item gear-item-2'></div>
+          <div class='gear-item gear-item-2'></div>
         </div>
       </div>
       <div class='gear-types'>
