@@ -24,9 +24,46 @@ export function initialize() {
     buttons[n].innerHTML = jellysvg
     buttons[n].querySelectorAll<SVGPathElement>('path')![n - 1].setAttribute('stroke', 'white')
   }
+  const values = [
+    [2],
+    0,
+    [0,1],
+    2
+  ]
+  const views = document.querySelectorAll<HTMLDivElement>('.gear-select')
+  function update() {
+    if (mode == null) return
+    const view = views[mode]
+    const items = view.querySelectorAll<HTMLDivElement>('.gear-item')
+    const value = values[mode]
+    items.forEach(el => el.classList.remove('active'))
+    if (typeof value === 'number') {
+      items[value].classList.add('active')
+    } else {
+      for (const v of value) items[v].classList.add('active')
+    }
+  }
+  views.forEach((view, mode) => {
+    const items = view.querySelectorAll<HTMLDivElement>('.gear-item')
+    items.forEach((item, i) => {
+      item.onpointerdown = () => {
+        const v = values[mode]
+        if (typeof v === 'number') {
+          console.log('update', mode, v, i)
+          values[mode] = i
+        } else if (v.includes(i)) {
+          console.log('rm', mode, v, i)
+          values[mode] = v.filter(v => v !== i)
+        } else {
+          console.log('add', mode, v, i)
+          v.push(i)
+        }
+        update()
+      }
+    })
+  })
   function changeMode(m: number | null) {
     mode = m
-    const selectors = ['.gear-select-head', '.gear-select-body', '.gear-select-string', '.gear-select-ribbon']
     buttons.forEach((el, i) => {
       const className = 'active'
       if (m === i) {
@@ -35,16 +72,14 @@ export function initialize() {
         el.classList.remove(className)
       }
     })
-    document.querySelectorAll<HTMLDivElement>('.gear-select').forEach(el => {
-      el.style.display = 'none'
-    })
-    if (typeof mode === 'number') {
-      document.querySelector<HTMLDivElement>(selectors[mode])!.style.display = ''
-    }
+    views.forEach(el => { el.style.display = 'none' })
+    if (typeof mode === 'number') views[mode].style.display = ''
+    update()
   }
   buttons.forEach((el, i) => {
     el.onpointerdown = () => {
       changeMode(mode === i ? null : i)
     }
   })
+  update()
 }

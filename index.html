@@ -137,7 +137,7 @@ canvas {
   background: rgba(0, 0, 0, 0.5);
   cursor: pointer;
 }
-.gear-item:hover, .gear-item.active {
+.gear-item.active {
   border-color: white;
 }
 .gear-item.active::before {
@@ -174,9 +174,6 @@ canvas {
   background: rgba(0, 0, 0, 0.5);
   cursor: pointer;
 }
-.gear-type.active {
-  border-color: white;
-}
 .gear-type::before {
   content: '';
   position: absolute;
@@ -185,14 +182,14 @@ canvas {
   top: -1.2vmin;
   bottom: -1.2vmin;
   border-radius: 4.4vmin;
-  border: 1.2vmin solid rgba(255, 255, 128, 1);
+  border: 1.4vmin solid #ff8;
   opacity: 0;
   transition: 0.1s linear opacity;
 }
 .gear-type.active::before {
   opacity: 1;
 }
-.gear-type:hover, .gear-type:active {
+.gear-type:hover {
   border-color: white;
 }
 </style>
@@ -206,14 +203,14 @@ canvas {
     <div class='component-square'>
       <div class='gear-select gear-select-head' style='display:none'>
         <div class='gear-select-row'>
-          <div class='gear-item gear-item-3 active'></div>
+          <div class='gear-item gear-item-3'></div>
           <div class='gear-item gear-item-3'></div>
           <div class='gear-item gear-item-3'></div>
         </div>
       </div>
       <div class='gear-select gear-select-body' style='display:none'>
         <div class='gear-select-row'>
-          <div class='gear-item gear-item-3 active'></div>
+          <div class='gear-item gear-item-3'></div>
           <div class='gear-item gear-item-3'></div>
           <div class='gear-item gear-item-3'></div>
         </div>
@@ -225,7 +222,7 @@ canvas {
       </div>
       <div class='gear-select gear-select-string' style='display:none'>
         <div class='gear-select-row'>
-          <div class='gear-item gear-item-2 active'></div>
+          <div class='gear-item gear-item-2'></div>
           <div class='gear-item gear-item-2'></div>
         </div>
       </div>
