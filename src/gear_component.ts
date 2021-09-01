@@ -16,7 +16,8 @@ const jellysvg = `
   </g>
 </svg>
 `
-export function initialize() {
+export type GearValue = [number[], number, number[], number]
+export function initialize(values: GearValue, onchange: (values: GearValue) => void) {
   const buttons = document.querySelectorAll<HTMLDivElement>('.gear-type')
   buttons[0].innerHTML = ringsvg
   let mode: number | null = null
@@ -24,12 +25,6 @@ export function initialize() {
     buttons[n].innerHTML = jellysvg
     buttons[n].querySelectorAll<SVGPathElement>('path')![n - 1].setAttribute('stroke', 'white')
   }
-  const values = [
-    [2],
-    0,
-    [0,1],
-    2
-  ]
   const views = document.querySelectorAll<HTMLDivElement>('.gear-select')
   function update() {
     if (mode == null) return
@@ -48,6 +43,7 @@ export function initialize() {
     items.forEach((item, i) => {
       item.onpointerdown = () => {
         const v = values[mode]
+        values = [...values]
         if (typeof v === 'number') {
           console.log('update', mode, v, i)
           values[mode] = i
@@ -56,8 +52,9 @@ export function initialize() {
           values[mode] = v.filter(v => v !== i)
         } else {
           console.log('add', mode, v, i)
-          v.push(i)
+          values[mode] = [...v, i]
         }
+        onchange(values)
         update()
       }
     })

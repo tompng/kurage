@@ -3,15 +3,38 @@ import { Jelly } from './jelly'
 import * as THREE from 'three'
 import { Point3D, normalize, scale as vectorScale, add as vectorAdd, sub as vectorSub, SmoothPoint3D } from './math'
 import { RibbonRenderer } from './ribbon_mesh'
-import textureUrl from './images/jelly/0.jpg'
+import textureUrl0 from './images/jelly/0.jpg'
+import textureUrl1 from './images/jelly/1.jpg'
+import textureUrl2 from './images/jelly/2.jpg'
+import textureUrl3 from './images/jelly/3.jpg'
+import textureUrl4 from './images/jelly/4.jpg'
+import textureUrl5 from './images/jelly/5.jpg'
 import { World } from './world'
 import { BezierStringRenderer } from './string_mesh'
 import { Menu } from './menu'
-import { initialize as initializeGearComponent } from './gear_component'
+import { GearValue, initialize as initializeGearComponent } from './gear_component'
 const renderOnResize: (() => void)[] = []
+const textureUrls = [textureUrl0, textureUrl1, textureUrl2, textureUrl3, textureUrl4, textureUrl5]
+const textures = textureUrls.map(url => {
+  const texture = new THREE.TextureLoader().load(url)
+  texture.wrapS = THREE.ClampToEdgeWrapping
+  texture.wrapT = THREE.ClampToEdgeWrapping
+  texture.generateMipmaps = true
+  texture.needsUpdate = true
+  return texture
+})
 const mainDiv = document.querySelector<HTMLDivElement>('#main')!
+const gearValue: GearValue = [[2], 3, [0,1], 2]
 const menu = new Menu(mainDiv)
-initializeGearComponent()
+document.querySelectorAll<HTMLDivElement>('.gear-select-body .gear-item').forEach((el, i) => {
+  el.style.backgroundImage = 'url(' + textureUrls[i] + ')'
+  el.style.backgroundPosition = 'center'
+  el.style.backgroundSize = '200%'
+})
+initializeGearComponent(gearValue, values => {
+  jelly.updateTexture(textures[values[1]])
+  render()
+})
 
 const mapComponent = document.querySelector<HTMLDivElement>('#map')!
 const bookComponent = document.querySelector<HTMLDivElement>('#book')!
@@ -22,7 +45,6 @@ gearComponent.remove()
 menu.components.map = mapComponent
 menu.components.book = bookComponent
 menu.components.gear = gearComponent
-
 
 renderOnResize.push(() => menu.reRender())
 menu.onOpen = () => {
@@ -37,11 +59,7 @@ menu.onClose = () => {
 }
 
 const stringRenderer = new BezierStringRenderer()
-const texture = new THREE.TextureLoader().load(textureUrl)
-texture.wrapS = THREE.ClampToEdgeWrapping
-texture.wrapT = THREE.ClampToEdgeWrapping
-texture.generateMipmaps = true
-texture.needsUpdate = true
+const texture = textures[3]
 const jelly = new Jelly(6, texture)
 jelly.setPosition({ x: 0, y: 0, z: -2 }, { x: -1, y: 0, z: 0.1 })
 const world = new World(stringRenderer, jelly)

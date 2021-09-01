@@ -100,6 +100,11 @@ export class Jelly {
     })
     this.setPosition({ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 1 })
   }
+  updateTexture(texture: THREE.Texture) {
+    for (const cell of this.cells) {
+      cell.uniforms.map.value = texture
+    }
+  }
   setPosition(position: Point3D, direction = randomDirection()) {
     this.position = position
     const targetDir = normalize(direction)
