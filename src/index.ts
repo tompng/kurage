@@ -86,6 +86,7 @@ window.onresize = setSize
 const touch = {
   id: null as null | number,
   lastActiveTime: 1 as null | number,
+  arrow: false,
   start: { x: 0, y: 0 },
   end: { x: 0, y: 0 },
   th: Math.PI,
@@ -110,12 +111,16 @@ window.onpointerdown = e => {
   e.preventDefault()
   if (menu.component) return
   const p = getTouchPoint(e)
+  touch.id = e.pointerId
   if (Math.hypot(p.x, p.y) < 0.4) {
-    touch.id = e.pointerId
+    touch.arrow = true
     touch.start = p
     touch.end = p
+    touch.gpos = null
     touch.lastActiveTime = null
   } else {
+    touch.lastActiveTime = 1
+    touch.arrow = false
     touch.gpos = screenToGlobal(p)
     touch.taps.push({ ...p, time: new Date().getTime() })
   }
@@ -137,8 +142,13 @@ function globalToScreen(p: Point3D) {
 
 window.onpointermove = e => {
   e.preventDefault()
-  if (!touch || touch.id !== e.pointerId) return
-  touch.end = getTouchPoint(e)
+  if (touch.id !== e.pointerId) return
+  const p = getTouchPoint(e)
+  if (!touch.arrow) {
+    touch.gpos = screenToGlobal(p)
+    return
+  }
+  touch.end = p
   const dx = touch.end.x - touch.start.x
   const dy = touch.end.y - touch.start.y
   const dr = Math.hypot(dx, dy)
@@ -150,8 +160,10 @@ window.onpointermove = e => {
 }
 window.onpointerup = e => {
   e.preventDefault()
-  if (touch.id === e.pointerId) touch.lastActiveTime = new Date().getTime()
+  if (touch.id !== e.pointerId) return
+  if (!touch.lastActiveTime) touch.lastActiveTime = new Date().getTime()
   touch.id = null
+  touch.gpos = null
 }
 
 const ribbonSegments = 20
@@ -271,7 +283,6 @@ function frame() {
     dt = Math.max(1 - (performance.now() - stopAt) / 1000, 0) * 0.01
   }
   world.update(dt, touch.gpos)
-  touch.gpos = null
   if (dt !== 0) render()
   requestAnimationFrame(frame)
 }
