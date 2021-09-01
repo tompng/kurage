@@ -6,71 +6,22 @@ import { RibbonRenderer } from './ribbon_mesh'
 import textureUrl from './images/jelly/0.jpg'
 import { World } from './world'
 import { BezierStringRenderer } from './string_mesh'
-import { CanvasIcon, CloseMenuIcon } from './icon'
-import { ComponentSwitcher } from './component_switcher'
+import { Menu } from './menu'
 
 const renderOnResize: (() => void)[] = []
 const mainDiv = document.querySelector<HTMLDivElement>('#main')!
-const component = document.createElement('div')
-component.textContent = 'to be continued'
-component.style.cssText = `
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 2;
-  font-size: 8vmin;
-  color: white;
-  background: rgba(180, 100, 100, 0.8);
-`
-const menuComponent = new ComponentSwitcher(mainDiv)
-
-const menuState = {
-  component: null as any,
-  dir: -1 as 1 | -1,
-  phase: 0
-}
-
-const b1 = new CanvasIcon('book')
-const b2 = new CanvasIcon('tshirt')
-const b3 = new CanvasIcon('map')
-const menuclose = new CloseMenuIcon()
-;[b1, b2, b3].forEach((b, i) => {
-  const div = document.createElement('div')
-  mainDiv.appendChild(div)
-  div.appendChild(b.canvas)
-  const type = ['book', 'gear', 'map'][i]
-  div.className = 'button ' + type
-  div.style.position = 'absolute'
-  b.render()
-  b.canvas.onpointerdown = e => {
-    if (!(window as any).stopAt) {
-      ;(window as any).startAt = null
-      ;(window as any).stopAt = performance.now()-10000
-    }
-    component.innerHTML = type + '<br>' + '←to be continued'
-    e.stopPropagation()
-    menuclose.activate()
-    menuComponent.show(component)
+const menu = new Menu(mainDiv)
+renderOnResize.push(() => menu.reRender())
+menu.onOpen = () => {
+  if (!(window as any).stopAt) {
+    ;(window as any).startAt = null
+    ;(window as any).stopAt = performance.now()-10000
   }
-})
-menuclose.canvas.className = 'menuclose'
-mainDiv.appendChild(menuclose.canvas)
-menuclose.render()
-menuclose.onClick = () => {
-  menuclose.deactivate()
-  menuComponent.hide()
+}
+menu.onClose = () => {
   ;(window as any).stopAt = null
   ;(window as any).startAt = performance.now()
 }
-
-renderOnResize.push(() => {
-  b1.render()
-  b2.render()
-  b3.render()
-  menuclose.render()
-})
 
 const stringRenderer = new BezierStringRenderer()
 const texture = new THREE.TextureLoader().load(textureUrl)
@@ -157,7 +108,7 @@ document.addEventListener('touchstart', e => {
 }, { passive: false })
 window.onpointerdown = e => {
   e.preventDefault()
-  if (menuState.component) return
+  if (menu.component) return
   const p = getTouchPoint(e)
   if (Math.hypot(p.x, p.y) < 0.4) {
     touch.id = e.pointerId

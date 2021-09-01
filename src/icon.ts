@@ -84,7 +84,7 @@ function crossPath(ctx: CanvasRenderingContext2D) {
 
 const icons = {
   map: mapPath,
-  tshirt: tshirtPath,
+  gear: tshirtPath,
   book: bookPath,
   close: crossPath
 }
@@ -215,6 +215,7 @@ export class CloseMenuIcon {
     this.animate()
   }
   prevTime = 0
+  onUpdate: ((phase: number, dir: -1 | 1) => void) | null = null
   animate() {
     if (this.timer) return
     if (this.dir === 1 && this.phase === 1) return
@@ -227,6 +228,7 @@ export class CloseMenuIcon {
       this.prevTime = time
       this.phase = Math.min(Math.max(0, this.phase + this.dir * dt), 1)
       this.render()
+      this.onUpdate?.(this.phase, this.dir)
       this.animate()
     })
   }
