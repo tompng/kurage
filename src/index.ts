@@ -7,10 +7,23 @@ import textureUrl from './images/jelly/0.jpg'
 import { World } from './world'
 import { BezierStringRenderer } from './string_mesh'
 import { Menu } from './menu'
-
+import { initialize as initializeGearComponent } from './gear_component'
 const renderOnResize: (() => void)[] = []
 const mainDiv = document.querySelector<HTMLDivElement>('#main')!
 const menu = new Menu(mainDiv)
+initializeGearComponent()
+
+const mapComponent = document.querySelector<HTMLDivElement>('#map')!
+const bookComponent = document.querySelector<HTMLDivElement>('#book')!
+const gearComponent = document.querySelector<HTMLDivElement>('#gear')!
+mapComponent.remove()
+bookComponent.remove()
+gearComponent.remove()
+menu.components.map = mapComponent
+menu.components.book = bookComponent
+menu.components.gear = gearComponent
+
+
 renderOnResize.push(() => menu.reRender())
 menu.onOpen = () => {
   if (!(window as any).stopAt) {
@@ -109,7 +122,7 @@ document.addEventListener('touchstart', e => {
 }, { passive: false })
 window.onpointerdown = e => {
   e.preventDefault()
-  if (menu.component) return
+  if (menu.type) return
   const p = getTouchPoint(e)
   touch.id = e.pointerId
   if (Math.hypot(p.x, p.y) < 0.4) {

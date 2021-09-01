@@ -234,15 +234,6 @@ export class CloseMenuIcon {
   }
 }
 
-
-export const jellySvg = `
-<svg width=64 height=64 style='position:fixed;z-index:9999'>
-  <path
-    d="M14,32 C10,10 54,10 50,32 M23,32 Q23,43 18,53 M29,32 Q29,43 27,54 M35,32 Q35,43 37,54 M41,32 Q41,43 46,53"
-    stroke-linecap="round" stroke-width="4" stroke="#eee" fill="none"
-  />
-</svg>`
-
 export const shellSvg = `
 <svg width=64 height=64>
   <path

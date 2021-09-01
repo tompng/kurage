@@ -66,8 +66,81 @@ canvas {
 #main {
   position: absolute;
 }
+
+#map, #book, #gear {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+#gear {
+  background: rgba(128, 90, 90, 0.75)
+}
+.component-square {
+  width: 100%;
+  height: 70vh;
+  display: flex;
+  position: relative;
+}
+@media (orientation: landscape) {
+  .component-square {
+    height: 100%;
+    width: 70vw;
+  }
+}
+.gear-types {
+  display: flex;
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 20vmin;
+  justify-content: space-around;
+  align-items: center;
+}
+.gear-type svg {
+  width: 8vmin;
+  height: 8vmin;
+}
+.gear-type {
+  display: inline-block;
+  width: 16vmin;
+  height: 16vmin;
+  border-radius: 4vmin;
+  border: 0.8vmin solid #ddd;
+  background: rgba(0, 0, 0, 0.5);
+}
+.gear-type:hover, .gear-type:active {
+  border-color: white;
+}
 </style>
 <body>
 <div id='main'></div>
+<div style='display:none'>
+  <div id='map'>
+    map
+  </div>
+  <div id='gear'>
+    <div class='component-square'>
+      <div></div>
+      <div class='gear-types'>
+        <div class='gear-type'></div>
+        <div class='gear-type'></div>
+        <div class='gear-type'></div>
+        <div class='gear-type'></div>
+      </div>
+    </div>
+  </div>
+  <div id='book'>
+    book
+  </div>
+</div>
 <script src="dist/index.js"></script>
 </body>
