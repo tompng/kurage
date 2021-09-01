@@ -17,11 +17,27 @@ const jellysvg = `
 </svg>
 `
 export function initialize() {
-  const buttons = document.querySelectorAll('.gear-type')
+  const buttons = document.querySelectorAll<HTMLDivElement>('.gear-type')
   buttons[0].innerHTML = ringsvg
+  let mode: number | null = null
   for (const n of [1, 2, 3]) {
     buttons[n].innerHTML = jellysvg
     buttons[n].querySelectorAll<SVGPathElement>('path')![n - 1].setAttribute('stroke', 'white')
   }
-
+  function changeMode(m: number | null) {
+    mode = m
+    buttons.forEach((el, i) => {
+      const className = 'active'
+      if (m === i) {
+        el.classList.add(className)
+      } else {
+        el.classList.remove(className)
+      }
+    })
+  }
+  buttons.forEach((el, i) => {
+    el.onpointerdown = () => {
+      changeMode(mode === i ? null : i)
+    }
+  })
 }
