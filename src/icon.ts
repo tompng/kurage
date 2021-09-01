@@ -224,7 +224,7 @@ export class CloseMenuIcon {
     this.timer = requestAnimationFrame(() => {
       this.timer = null
       const time = performance.now()
-      const dt = (time - this.prevTime) / 1000
+      const dt = (time - this.prevTime) / 500
       this.prevTime = time
       this.phase = Math.min(Math.max(0, this.phase + this.dir * dt), 1)
       this.render()

@@ -81,7 +81,12 @@ canvas {
   align-items: center;
 }
 #gear {
-  background: rgba(128, 90, 90, 0.75)
+  background: radial-gradient(
+    circle at center,
+    transparent 0, transparent 20%,
+    rgba(128, 90, 90, 0.7) 50%,
+    rgba(128, 90, 90, 0.8) 100%
+  );
 }
 .component-square {
   width: 100%;
@@ -93,6 +98,7 @@ canvas {
   .component-square {
     height: 100%;
     width: 70vw;
+    max-width: 100vh;
   }
 }
 .gear-types {
@@ -111,8 +117,8 @@ canvas {
 }
 .gear-type {
   display: inline-block;
-  width: 16vmin;
-  height: 16vmin;
+  width: 14vmin;
+  height: 14vmin;
   border-radius: 4vmin;
   border: 0.8vmin solid #ddd;
   background: rgba(0, 0, 0, 0.5);
