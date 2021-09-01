@@ -102,9 +102,9 @@ export class World {
       jelly.velocity.z += currentDir.z * dt * 2
       // jelly.rotation = Matrix3.fromRotation(rot, theta).mult(jelly.rotation)
       const mscale = 1 - 10 * dt
-      jelly.momentum.x = jelly.momentum.x * mscale + rot.x * theta
-      jelly.momentum.y = jelly.momentum.y * mscale + rot.y * theta
-      jelly.momentum.z = jelly.momentum.z * mscale + rot.z * theta
+      jelly.momentum.x = jelly.momentum.x * mscale + rot.x * theta * dt * 100
+      jelly.momentum.y = jelly.momentum.y * mscale + rot.y * theta * dt * 100
+      jelly.momentum.z = jelly.momentum.z * mscale + rot.z * theta * dt * 100
     }
     const polygon = jelly.boundingPolygon()
     polygon.forEach(p => {
