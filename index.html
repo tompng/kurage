@@ -80,14 +80,6 @@ canvas {
   justify-content: center;
   align-items: center;
 }
-#gear {
-  background: radial-gradient(
-    circle at center,
-    transparent 0, transparent 20%,
-    rgba(128, 90, 90, 0.7) 50%,
-    rgba(128, 90, 90, 0.8) 100%
-  );
-}
 .component-square {
   width: 100vw;
   height: 100vw;
@@ -102,6 +94,60 @@ canvas {
     max-width: 75vw;
     max-height: 75vw;
   }
+}
+#book {
+  background: #226;
+}
+.book-item {
+  position: absolute;
+  width: 25%;
+  height: 25%;
+  background: #113;
+  box-sizing: border-box;
+  border: 0.8vmin solid rgba(255, 255, 255, 0.5);
+  border-radius: 30%;
+  cursor: pointer;
+}
+.book-item:hover {
+  border-color: white;
+}
+
+@media (orientation: portrait) {
+  .book-item:nth-child(3n+1) { left: 6.25%; }
+  .book-item:nth-child(3n+2) { left: 37.5%; }
+  .book-item:nth-child(3n+3) { left: 68.75%; }
+  .book-item:nth-child(2) { top: -11.25%; }
+  .book-item:nth-child(1), .book-item:nth-child(3) { top: 5%; }
+  .book-item:nth-child(5) { top: 21.25%; }
+  .book-item:nth-child(4), .book-item:nth-child(6) { top: 37.5%; }
+  .book-item:nth-child(8) { top: 53.75%; }
+  .book-item:nth-child(7), .book-item:nth-child(9) { top: 70%; }
+  .book-item:nth-child(10) { left: 37.5%; top: 86.25%; }
+}
+@media (orientation: landscape) {
+  .book-item { top: 37.5% }
+  .book-item:nth-child(-n+3) { top: 6.25%; }
+  .book-item:nth-child(n+8) { top: 68.75%; }
+  .book-item:nth-child(1), .book-item:nth-child(8) { left: 5%; }
+  .book-item:nth-child(2), .book-item:nth-child(9) { left: 37.5%; }
+  .book-item:nth-child(3), .book-item:nth-child(10) { left: 70%; }
+  .book-item:nth-child(4) { left: -11.25%; }
+  .book-item:nth-child(5) { left: 21.25%; }
+  .book-item:nth-child(6) { left: 53.75%; }
+  .book-item:nth-child(7) { left: 86.25%; }
+}
+
+
+#map {
+  background: rgba(0, 0, 0, 0.8);
+}
+#gear {
+  background: radial-gradient(
+    circle at center,
+    transparent 0, transparent 20%,
+    rgba(128, 90, 90, 0.7) 50%,
+    rgba(128, 90, 90, 0.8) 100%
+  );
 }
 .gear-select-row {
   display: flex;
@@ -204,12 +250,15 @@ canvas {
 .gear-type:hover {
   border-color: white;
 }
+
 </style>
 <body>
 <div id='main'></div>
 <div style='display:none'>
   <div id='map'>
-    map
+    <div class='component-square'>
+      map
+    </div>
   </div>
   <div id='gear'>
     <div class='component-square'>
@@ -247,7 +296,18 @@ canvas {
     </div>
   </div>
   <div id='book'>
-    book
+    <div class='component-square'>
+      <div class='book-item'></div>
+      <div class='book-item'></div>
+      <div class='book-item'></div>
+      <div class='book-item'></div>
+      <div class='book-item'></div>
+      <div class='book-item'></div>
+      <div class='book-item'></div>
+      <div class='book-item'></div>
+      <div class='book-item'></div>
+      <div class='book-item'></div>
+    </div>
   </div>
 </div>
 <script src="dist/index.js"></script>
