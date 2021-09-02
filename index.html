@@ -141,6 +141,15 @@ canvas {
 #map {
   background: rgba(0, 0, 0, 0.8);
 }
+#map canvas {
+  position: absolute;
+  left: 5%;
+  top: 5%;
+  width: 90%;
+  height: 90%;
+  background: gray;
+}
+
 #gear {
   background: radial-gradient(
     circle at center,
@@ -190,7 +199,6 @@ canvas {
 
 .gear-item-31:nth-child(2), .gear-item-32:nth-child(2), .gear-item-32:nth-child(5) { left: 40%; }
 .gear-item-31:nth-child(3), .gear-item-32:nth-child(3), .gear-item-32:nth-child(6) { left: 67.5%; }
-
 
 .gear-item {
   position: absolute;
@@ -257,7 +265,7 @@ canvas {
 <div style='display:none'>
   <div id='map'>
     <div class='component-square'>
-      map
+      <canvas></canvas>
     </div>
   </div>
   <div id='gear'>
