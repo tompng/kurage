@@ -12,7 +12,7 @@ import textureUrl5 from './images/jelly/5.jpg'
 import { World } from './world'
 import { BezierStringRenderer } from './string_mesh'
 import { Menu } from './menu'
-import { GearValue, initialize as initializeGearComponent } from './gear_component'
+import { GearValue, GearComponent } from './gear_component'
 const renderOnResize: (() => void)[] = []
 const textureUrls = [textureUrl0, textureUrl1, textureUrl2, textureUrl3, textureUrl4, textureUrl5]
 const textures = textureUrls.map(url => {
@@ -31,20 +31,17 @@ document.querySelectorAll<HTMLDivElement>('.gear-select-body .gear-item').forEac
   el.style.backgroundPosition = 'center'
   el.style.backgroundSize = '200%'
 })
-initializeGearComponent(gearValue, values => {
+menu.components.gear = new GearComponent(gearValue, values => {
   jelly.updateTexture(textures[values[1]])
   render()
 })
 
-const mapComponent = document.querySelector<HTMLDivElement>('#map')!
-const bookComponent = document.querySelector<HTMLDivElement>('#book')!
-const gearComponent = document.querySelector<HTMLDivElement>('#gear')!
-mapComponent.remove()
-bookComponent.remove()
-gearComponent.remove()
-menu.components.map = mapComponent
-menu.components.book = bookComponent
-menu.components.gear = gearComponent
+const mapComponentDOM = document.querySelector<HTMLDivElement>('#map')!
+const bookComponentDOM = document.querySelector<HTMLDivElement>('#book')!
+mapComponentDOM.remove()
+bookComponentDOM.remove()
+menu.components.map = { dom: mapComponentDOM }
+menu.components.book = { dom: bookComponentDOM }
 
 renderOnResize.push(() => menu.reRender())
 menu.onOpen = () => {
@@ -86,7 +83,8 @@ renderer.domElement.style.width = uiCanvas.style.width = '100%'
 renderer.domElement.style.height = uiCanvas.style.height = '100%'
 mainDiv.appendChild(renderer.domElement)
 mainDiv.appendChild(uiCanvas)
-
+const fullSquareStyle = document.createElement('style')
+document.head.appendChild(fullSquareStyle)
 function setSize(){
   const minAspect = 3 / 5
   const maxAspect = 3 / 4
@@ -101,6 +99,8 @@ function setSize(){
     height = (innerHeight * aspect < innerWidth) ? innerHeight : innerWidth / aspect
     width = height * aspect
   }
+  const squareSize = Math.min(width, height)
+  fullSquareStyle.textContent = `.full-square { width: ${squareSize}px; height: ${squareSize}px; }`
   renderer.setPixelRatio(devicePixelRatio)
   renderer.setSize(width, height)
   camera = new THREE.PerspectiveCamera(fov, width / height, 0.1, 100)

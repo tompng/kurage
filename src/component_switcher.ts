@@ -1,5 +1,10 @@
+export type Component = {
+  dom: HTMLDivElement
+  start?: () => void
+  end?: () => void
+}
 export class ComponentSwitcher {
-  component: HTMLDivElement | null = null
+  component: Component | null = null
   timer: number | null = null
   dir = -1
   phase = 0
@@ -46,19 +51,21 @@ export class ComponentSwitcher {
     if (this.dir === -1) {
       if (this.phase === 0) {
         this.menuFade.remove()
-        this.component?.remove()
+        this.component?.dom.remove()
+        this.component?.end?.()
         this.component = null
       } else if (!this.menuFade.parentNode) {
         this.mainDiv.appendChild(this.menuFade)
       }
     }
     if (this.component) {
-      this.component.style.opacity = String(this.phase)
+      this.component.dom.style.opacity = String(this.phase)
     }
   }
-  show(component: HTMLDivElement, time = 0.25) {
+  show(component: Component, time = 0.25) {
     this.speed = 1 / time
-    this.mainDiv.appendChild(component)
+    this.mainDiv.appendChild(component.dom)
+    component.start?.()
     this.component = component
     this.dir = 1
     this.animate()

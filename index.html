@@ -80,21 +80,15 @@ canvas {
   justify-content: center;
   align-items: center;
 }
-.component-square {
-  width: 100vw;
-  height: 100vw;
-  max-width: 75vh;
-  max-height: 75vh;
+
+.full-square {
+  width: 100vmin;
+  height: 100vmin;
+  max-width: 75vmax;
+  max-height: 75vmax;
   position: absolute;
 }
-@media (orientation: landscape) {
-  .component-square {
-    width: 100vh;
-    height: 100vh;
-    max-width: 75vw;
-    max-height: 75vw;
-  }
-}
+
 #book {
   background: #226;
 }
@@ -137,7 +131,6 @@ canvas {
   .book-item:nth-child(7) { left: 86.25%; }
 }
 
-
 #map {
   background: rgba(0, 0, 0, 0.8);
 }
@@ -153,8 +146,8 @@ canvas {
 #gear {
   background: radial-gradient(
     circle at center,
-    transparent 0, transparent 20%,
-    rgba(128, 90, 90, 0.7) 50%,
+    transparent 0, transparent 30%,
+    rgba(128, 90, 90, 0.7) 40%,
     rgba(128, 90, 90, 0.8) 100%
   );
 }
@@ -264,12 +257,12 @@ canvas {
 <div id='main'></div>
 <div style='display:none'>
   <div id='map'>
-    <div class='component-square'>
+    <div class='full-square'>
       <canvas></canvas>
     </div>
   </div>
   <div id='gear'>
-    <div class='component-square'>
+    <div class='full-square'>
       <div class='gear-select gear-select-head' style='display:none'>
         <div class='gear-item gear-item-22'></div>
         <div class='gear-item gear-item-22'></div>
@@ -304,7 +297,7 @@ canvas {
     </div>
   </div>
   <div id='book'>
-    <div class='component-square'>
+    <div class='full-square'>
       <div class='book-item'></div>
       <div class='book-item'></div>
       <div class='book-item'></div>

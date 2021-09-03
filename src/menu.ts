@@ -1,4 +1,4 @@
-import { ComponentSwitcher } from './component_switcher'
+import { Component, ComponentSwitcher } from './component_switcher'
 import { CanvasIcon, CloseMenuIcon } from './icon'
 
 const defaultComponent = document.createElement('div')
@@ -22,7 +22,7 @@ export class Menu {
   component: any = null
   dir: 1 | -1 = -1
   phase = 0
-  components: Record<MenuType, HTMLDivElement | null> = { book: null, gear: null, map: null}
+  components: Record<MenuType, Component | null> = { book: null, gear: null, map: null}
   buttons: Record<MenuType, { icon: CanvasIcon, div: HTMLDivElement }>
   closeMenu = new CloseMenuIcon()
   constructor(public mainDiv: HTMLDivElement) {
@@ -58,8 +58,7 @@ export class Menu {
   open(type: MenuType) {
     this.type = type
     this.onOpen?.(type)
-    defaultComponent.innerHTML = `${type}<br>←to be continued`
-    const component = this.components[type] || defaultComponent
+    const component = this.components[type] || { dom: defaultComponent }
     for (const [key, button] of Object.entries(this.buttons)) {
       button.div.style.opacity = key === type ? '1' : '0'
     }
