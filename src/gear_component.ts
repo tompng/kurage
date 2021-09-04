@@ -74,20 +74,30 @@ export class GearComponent {
       for (const v of value) items[v].classList.add('active')
     }
   }
+  phase = 0
   start() {
     this.changeMode(null)
-    this.updateBG(0)
+    this.phase = 0
+    this.render()
   }
-  updateBG(phase: number) {
-    const t = 1 - (1 - phase) ** 2
+  render() {
+    const t = this.phase
     const rgb = '128, 90, 90'
-    const p1 = 100 * (1 - t) + t * 30
-    const p2 = 110 * (1 - t) + t * 40
-    const p3 = 200 * (1 - t) + t * 100
-    this.dom.style.background = `radial-gradient(circle at center, transparent 0, transparent ${p1}%, rgba(${rgb}, 0.7) ${p2}%, rgba(${rgb}, 0.8) ${p3}%)`
+    const rlarge = Math.max(this.dom.offsetWidth, this.dom.offsetHeight) / 2
+    const r = Math.min(this.dom.offsetWidth, this.dom.offsetHeight) / 2
+    const p1 = rlarge * (1 - t) + t * 0.5 * r
+    const p2 = 1.1 * rlarge * (1 - t) + t * 0.7 * r
+    const p3 = 2 * rlarge
+    this.dom.style.background = `radial-gradient(circle at center, transparent 0, transparent ${p1}px, rgba(${rgb}, 0.7) ${p2}px, rgba(${rgb}, 0.8) ${p3}px)`
   }
-  transition(phase: number) {
-    this.updateBG(phase)
+  transition(phase: number, dir: -1 | 1) {
+    const smooth = 1 - (1 - phase) ** 2
+    if (dir === 1) {
+      this.phase = smooth + 2 * phase * (1 - phase) ** 2
+    } else {
+      this.phase = smooth
+    }
+    this.render()
   }
   changeMode(m: number | null) {
     this.mode = m
