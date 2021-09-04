@@ -46,7 +46,7 @@ renderOnResize.push(() => menu.reRender())
 menu.onOpen = () => {
   if (!(window as any).stopAt) {
     ;(window as any).startAt = null
-    ;(window as any).stopAt = performance.now()-10000
+    ;(window as any).stopAt = performance.now()
   }
 }
 menu.onClose = () => {
@@ -308,9 +308,9 @@ function frame() {
   let dt = 0.01
   const { stopAt, startAt } = window as any
   if (startAt) {
-    dt = Math.min((performance.now() - startAt) / 1000, 1) * 0.01
+    dt = Math.min((performance.now() - startAt) / 500, 1) * 0.01
   } else if (stopAt) {
-    dt = Math.max(1 - (performance.now() - stopAt) / 1000, 0) * 0.01
+    dt = Math.max(1 - (performance.now() - stopAt) / 500, 0) * 0.01
   }
   world.update(dt, touch.gpos)
   if (dt !== 0) render()
