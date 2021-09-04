@@ -4,6 +4,7 @@ export type Component = {
   closeStart?: () => void
   end?: () => void
   transition?: (phase: number, dir: -1 | 1) => void
+  render?: () => void
 }
 export class ComponentSwitcher {
   component: Component | null = null

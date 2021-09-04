@@ -13,6 +13,8 @@ import { World } from './world'
 import { BezierStringRenderer } from './string_mesh'
 import { Menu } from './menu'
 import { GearValue, GearComponent } from './gear_component'
+import { BookComponent } from './book_component'
+
 const renderOnResize: (() => void)[] = []
 const textureUrls = [textureUrl0, textureUrl1, textureUrl2, textureUrl3, textureUrl4, textureUrl5]
 const textures = textureUrls.map(url => {
@@ -35,13 +37,10 @@ menu.components.gear = new GearComponent(gearValue, values => {
   jelly.updateTexture(textures[values[1]])
   render()
 })
-
+menu.components.book = new BookComponent()
 const mapComponentDOM = document.querySelector<HTMLDivElement>('#map')!
-const bookComponentDOM = document.querySelector<HTMLDivElement>('#book')!
 mapComponentDOM.remove()
-bookComponentDOM.remove()
 menu.components.map = { dom: mapComponentDOM }
-menu.components.book = { dom: bookComponentDOM }
 
 renderOnResize.push(() => menu.reRender())
 menu.onOpen = () => {

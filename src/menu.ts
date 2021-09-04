@@ -74,6 +74,7 @@ export class Menu {
   }
   reRender() {
     for (const { icon } of Object.values(this.buttons)) icon.render()
+    this.switcher.component?.render?.()
     this.closeMenu.render()
   }
 }
