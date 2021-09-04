@@ -23,7 +23,7 @@ export class GearComponent {
   mode: number | null = null
   views: NodeListOf<HTMLDivElement>
   buttons: NodeListOf<HTMLDivElement>
-  constructor (public values: GearValue, public onChange: (values: GearValue) => void) {
+  constructor(public values: GearValue, public onChange: (values: GearValue) => void) {
     this.dom = document.querySelector<HTMLDivElement>('#gear')!
     this.dom.remove()
     this.buttons = this.dom.querySelectorAll<HTMLDivElement>('.gear-type')
@@ -76,6 +76,18 @@ export class GearComponent {
   }
   start() {
     this.changeMode(null)
+    this.updateBG(0)
+  }
+  updateBG(phase: number) {
+    const t = 1 - (1 - phase) ** 2
+    const rgb = '128, 90, 90'
+    const p1 = 100 * (1 - t) + t * 30
+    const p2 = 110 * (1 - t) + t * 40
+    const p3 = 200 * (1 - t) + t * 100
+    this.dom.style.background = `radial-gradient(circle at center, transparent 0, transparent ${p1}%, rgba(${rgb}, 0.7) ${p2}%, rgba(${rgb}, 0.8) ${p3}%)`
+  }
+  transition(phase: number) {
+    this.updateBG(phase)
   }
   changeMode(m: number | null) {
     this.mode = m

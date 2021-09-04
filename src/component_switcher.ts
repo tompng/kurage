@@ -1,12 +1,14 @@
 export type Component = {
   dom: HTMLDivElement
   start?: () => void
+  closeStart?: () => void
   end?: () => void
+  transition?: (phase: number, dir: -1 | 1) => void
 }
 export class ComponentSwitcher {
   component: Component | null = null
   timer: number | null = null
-  dir = -1
+  dir: -1 | 1 = -1
   phase = 0
   prevTime = 0
   speed = 1
@@ -36,6 +38,7 @@ export class ComponentSwitcher {
       const dt = (time - this.prevTime) / 1000
       this.prevTime = time
       this.phase = Math.min(Math.max(0, this.phase + this.dir * dt * this.speed), 1)
+      this.component?.transition?.(this.phase, this.dir)
       this.render()
       this.animate()
     })
@@ -73,6 +76,7 @@ export class ComponentSwitcher {
   hide(time = 0.25) {
     this.speed = 1 / time
     this.dir = -1
+    this.component?.closeStart?.()
     this.animate()
   }
 }
