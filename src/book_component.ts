@@ -26,8 +26,6 @@ export class BookComponent {
     const phase = 1 - Math.exp(-4 * time) * (1 - 4 * time)
     const wsize = height / 8
     const heights = [
-      height + wsize - (height + wsize * 3 + height / 3) * phase,
-      height + wsize - (height + wsize * 3) * phase,
       height + wsize - (wsize + height * 0.7) * phase,
       height + wsize - (wsize + height * 0.65) * phase,
       height + wsize - (wsize + height * 0.6) * phase,
@@ -35,14 +33,16 @@ export class BookComponent {
       height + wsize - (wsize + height * 0.5) * phase
     ]
     const colors = [
-      '#404090',
-      '#383888',
       '#303080',
       '#282878',
       '#202070',
       '#181868',
       '#101060',
     ]
+    ctx.globalAlpha = phase
+    ctx.fillStyle = '#383888'
+    ctx.fillRect(0, 0, width, heights[0] + wsize)
+    ctx.globalAlpha = 1
     heights.forEach((h, n) => {
       const points: [number, number][] = []
       const a = Math.cos(n * 1234 + 1) * 1024 % 1
@@ -64,7 +64,7 @@ export class BookComponent {
       ctx.beginPath()
       curvePath(ctx, points)
       const h2 = n + 1 < heights.length ? heights[n + 1] : null
-      const y2 = h2 == null ? height : Math.max(h, h2) + wsize
+      const y2 = h2 == null ? height : h2 + wsize
       ctx.lineTo(width, y2)
       ctx.lineTo(0, y2)
       ctx.fill()
