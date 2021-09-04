@@ -43,6 +43,7 @@ type Connectivity = {
 }
 
 type StringInfo = Connectivity & {
+  tag?: string
   string: String3D
   render: StringRenderFunc
   ribbon?: Ribbon
@@ -209,10 +210,9 @@ export class Jelly {
   addAttachment(positions: Point3D[], render: AttachmentRenderFunc) {
     this.attachments.push({ positions, render })
   }
-  addString(conn: Connectivity, string: String3D, render: StringRenderFunc, hasRibbon = false) {
+  addString(conn: Connectivity, string: String3D, render: StringRenderFunc, tag?: string, hasRibbon?: boolean) {
     const ribbon = hasRibbon ? new Ribbon(string.numSegments) : undefined
-    this.strings.push({ ...conn, string, render, ribbon })
-    string.directions
+    this.strings.push({ tag, ...conn, string, render, ribbon })
     const gpos = this.transformGridPoint(conn.pos)
     string.points[0].x = gpos.x
     string.points[0].y = gpos.y
