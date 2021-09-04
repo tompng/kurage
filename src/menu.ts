@@ -19,7 +19,6 @@ type MenuType = 'book' | 'gear' | 'map'
 export class Menu {
   switcher: ComponentSwitcher
   type: MenuType | null = null
-  component: any = null
   dir: 1 | -1 = -1
   phase = 0
   components: Record<MenuType, Component | null> = { book: null, gear: null, map: null}
@@ -66,11 +65,18 @@ export class Menu {
     this.switcher.show(component)
   }
   close() {
-    this.type = null
-    this.closeMenu.deactivate()
-    this.switcher.hide()
-    for (const { div } of Object.values(this.buttons)) div.style.opacity = ''
-    this.onClose?.()
+    const executeClose = () => {
+      for (const { div } of Object.values(this.buttons)) div.style.opacity = ''
+      this.type = null
+      this.closeMenu.deactivate()
+      this.switcher.hide()
+      this.onClose?.()
+    }
+    if (this.switcher.component?.onClose) {
+      this.switcher.component.onClose(executeClose)
+    } else {
+      executeClose()
+    }
   }
   reRender() {
     for (const { icon } of Object.values(this.buttons)) icon.render()
