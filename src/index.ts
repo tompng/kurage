@@ -459,7 +459,9 @@ function addGaming(jelly: Jelly) {
       const rth = Math.PI * j / m / 2
       const r = Math.sin(rth)
       const z = 1 - Math.cos(rth)
-      line.push({ x: r * cos, y: r * sin, z })
+      const randFactor = 0.5 * (1 - j / m) * j / m
+      const xyrand = randFactor * (Math.random() - 0.5) / 4
+      line.push({ x: r * cos - xyrand * sin, y: r * sin + xyrand * cos, z: z + Math.random() * randFactor })
     }
     jelly.addAttachment(line, renderGamingAttachment)
   }
