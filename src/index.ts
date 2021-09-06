@@ -38,6 +38,7 @@ function updateJellyByGearValue(values: GearValue) {
   jelly.attachments = []
   if (values[0].includes(0)) addClover(jelly)
   if (values[0].includes(1)) strings.push(['hanagasa', addHanagasa])
+  if (values[0].includes(2)) addGaming(jelly)
   jelly.updateTexture(textures[values[1]])
   if (values[2].includes(0)) strings.push(['short', addShortString])
   if (values[2].includes(1)) strings.push(['long', addLongString])
@@ -392,7 +393,53 @@ function addClover(jelly: Jelly) {
   })
 }
 
-const centerPosition = new SmoothPoint3D(jelly.position, 0.5)
+function addGaming(jelly: Jelly) {
+  const n = 16
+  const gamingStringProfile = stringRenderer.getVaryingProfile({ l: 6, r: 12 }, 0.02)
+  function renderGamingAttachment(positions: Point3D[]) {
+    const time = performance.now() / 1000
+    function colorAt(t: number) {
+      const brightness = t * 6
+      return {
+        r: Math.max(0, 0.5 + Math.cos(time + 4 * t)) * brightness,
+        g: Math.max(0, 0.5 + Math.cos(time + 4 * t + 2 * Math.PI / 3)) * brightness,
+        b: Math.max(0, 0.5 + Math.cos(time + 4 * t + 4 * Math.PI / 3)) * brightness
+      }
+    }
+    gamingStringProfile.request(
+      [...new Array(positions.length - 3)].map((_, i) => {
+        const t1 = i / positions.length
+        const t2 = (i + 1) / positions.length
+        const a = positions[i]
+        const b = positions[i + 1]
+        const c = positions[i + 2]
+        const d = positions[i + 3]
+        return [
+          b,
+          vectorAdd(b, vectorScale(vectorSub(c, a), 1 / 6)),
+          vectorAdd(c, vectorScale(vectorSub(d, b), -1 / 6)),
+          c,
+          colorAt(t1),
+          colorAt(t2)
+        ]
+      }),
+    )
+  }
+  for (let i = 0; i < n; i++) {
+    const th = 2 * Math.PI * i / n
+    const cos = Math.cos(th)
+    const sin = Math.sin(th)
+    const line: Point3D[] = []
+    const m = 8
+    for (let j = 0; j <= m; j++) {
+      const rth = Math.PI * j / m / 2
+      const r = Math.sin(rth)
+      const z = 1 - Math.cos(rth)
+      line.push({ x: r * cos, y: r * sin, z })
+    }
+    jelly.addAttachment(line, renderGamingAttachment)
+  }
+}
 
 function render() {
   const size = new THREE.Vector2()
