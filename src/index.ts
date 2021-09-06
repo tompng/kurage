@@ -41,7 +41,8 @@ function updateJellyByGearValue(values: GearValue) {
   if (values[0].includes(2)) addGaming(jelly)
   jelly.updateTexture(textures[values[1]])
   if (values[2].includes(0)) strings.push(['short', addShortString])
-  if (values[2].includes(1)) strings.push(['long', addLongString])
+  if (values[2].includes(1)) strings.push(['middle', addMiddleString])
+  if (values[2].includes(2)) strings.push(['long', addLongString])
   if (values[3] === 0) strings.push(['ribbon', addRibbonString])
   const stringTypes = new Set<string | undefined>(strings.map(a => a[0]))
   jelly.strings = jelly.strings.filter(s => stringTypes.has(s.tag))
@@ -262,6 +263,29 @@ function addRibbonString(jelly: Jelly) {
   }
 }
 
+function addMiddleString(jelly: Jelly) {
+  const whiteBlueStringProfile = stringRenderer.getPlainProfile({ l: 4, r: 5 }, 0.015, new THREE.Color(0xBFBFFF))
+  function requestWhiteBlueString(string: String3D) {
+    whiteBlueStringProfile.request(string.bezierSegments())
+  }
+  for (let i = 0; i < 8; i++) {
+    const th = 2 * Math.PI * (i + 0.5) / 8
+    const cos = Math.cos(th)
+    const sin = Math.sin(th)
+    jelly.addString(
+      {
+        pos: { x: 0.98 * cos, y: 0.98 * sin, z: 0.9 },
+        dir: { x: cos, y: sin, z: 4 },
+        n: 6,
+        f: 10
+      },
+      new String3D(40, 1.4 + 0.2 * Math.random(), 0.5),
+      requestWhiteBlueString,
+      'middle'
+    )
+  }
+}
+
 function addLongString(jelly: Jelly) {
   const whiteBlueStringProfile = stringRenderer.getPlainProfile({ l: 4, r: 5 }, 0.015, new THREE.Color(0xBFBFFF))
   function requestWhiteBlueString(string: String3D) {
@@ -278,7 +302,7 @@ function addLongString(jelly: Jelly) {
         n: 10,
         f: 10
       },
-      new String3D(100, 2 + 0.5 * Math.random(), 1),
+      new String3D(100, 3 + 0.5 * Math.random(), 1.5),
       requestWhiteBlueString,
       'long'
     )

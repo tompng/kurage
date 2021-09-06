@@ -10,7 +10,7 @@ export class String3D {
   points: Point3D[] = []
   weights: number[] = []
   F: Point3D[] = []
-  friction = 0.5
+  friction = 1
   hardness = 4
   decay = 4
   constructor(public numSegments: number, public length: number, weight: number) {
