@@ -55,14 +55,14 @@ export class Aquarium {
     magFilter: THREE.NearestFilter,
     type: THREE.HalfFloatType
   })
-  camera = new THREE.PerspectiveCamera(90, 1, 0.1, 32)
-  refractScene = new THREE.Scene()
-  refractCamera = new THREE.Camera()
+  offscreenCamera = new THREE.PerspectiveCamera(90, 1, 0.1, 32)
+  scene = new THREE.Scene()
+  camera = new THREE.Camera()
   stringRenderer = new BezierStringRenderer()
   constructor(public radius: number) {
     const refractMesh = new THREE.Mesh(new THREE.PlaneBufferGeometry(), new THREE.MeshBasicMaterial({ map: this.renderTarget.texture }))
     refractMesh.scale.set(2, 2, 2)
-    this.refractScene.add(refractMesh)
+    this.scene.add(refractMesh)
   }
   objects: AquaObject[] = []
   update(dt: number) {
@@ -73,21 +73,31 @@ export class Aquarium {
     this.objects = []
   }
   renderToOffScreen(renderer: THREE.WebGLRenderer, size: number) {
-    const { camera } = this
-    camera.up.set(0, 0, 1)
-    camera.position.set(0, -Math.SQRT2 * this.radius, 0)
-    camera.lookAt(0, 0, 0)
+    const { offscreenCamera } = this
+    offscreenCamera.up.set(0, 0, 1)
+    offscreenCamera.position.set(0, -Math.SQRT2 * this.radius, 0)
+    offscreenCamera.lookAt(0, 0, 0)
     this.renderTarget.setSize(size, size)
     renderer.setRenderTarget(this.renderTarget)
     renderer.autoClear = false
     renderer.clearColor()
     renderer.clearDepth()
-    this.objects.forEach(obj => obj.render(renderer, camera))
-    this.stringRenderer.render(renderer, camera)
+    this.objects.forEach(obj => obj.render(renderer, offscreenCamera))
+    this.stringRenderer.render(renderer, offscreenCamera)
     renderer.setRenderTarget(null)
   }
   renderToScreen(renderer: THREE.WebGLRenderer) {
-    renderer.render(this.refractScene, this.refractCamera)
+    const size = new THREE.Vector2()
+    renderer.getSize(size)
+    const { x: width, y: height } = size
+    let fov = 50
+    const aspect = width / height
+    if (width < height) {
+      fov = 2 * Math.atan(Math.tan(Math.PI * fov / 180 / 2) / aspect) * 180 / Math.PI
+    }
+    // this.camera = new THREE.PerspectiveCamera(fov, aspect, 1, 16)
+
+    renderer.render(this.scene, this.camera)
   }
   compactAllocation() {
     this.renderTarget.setSize(1, 1)
