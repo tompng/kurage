@@ -1,11 +1,54 @@
 import * as THREE from 'three'
 import { BezierStringRenderer } from './string_mesh'
+import { randomDirection } from './math'
+import { Fish, Shrimp, HitFunc3D } from './fish_shrimp'
 
 type AquaObject = {
   update(dt: number): void
   render(renderer: THREE.WebGLRenderer, camera: THREE.Camera): void
+  dispose(): void
 }
 
+class FishShrimpsBase {
+  scene = new THREE.Scene()
+  objects: { update3D(dt: number, hitFunc: HitFunc3D): void; updateForRender(): void }[] = []
+  hitFunc: HitFunc3D
+  constructor(radius: number) {
+    const radius2 = radius * radius
+    this.hitFunc = (x, y, z) => x * x + y * y + z * z > radius2
+  }
+  update(dt: number) {
+    for (const obj of this.objects) obj.update3D(dt, this.hitFunc)
+  }
+  render(renderer: THREE.WebGLRenderer, camera: THREE.Camera) {
+    for (const obj of this.objects) obj.updateForRender()
+    renderer.render(this.scene, camera)
+  }
+}
+
+export class Fishes extends FishShrimpsBase {
+  constructor(radius: number) {
+    super(radius)
+    for (let i = 0; i < 20; i++) {
+      const fish = new Fish(randomDirection(radius * 0.8))
+      this.objects.push(fish)
+      this.scene.add(fish.mesh)
+    }
+  }
+  dispose() {}
+}
+
+export class Shrimps extends FishShrimpsBase {
+  constructor(radius: number) {
+    super(radius)
+    for (let i = 0; i < 20; i++) {
+      const fish = new Shrimp(randomDirection(radius * 0.8))
+      this.objects.push(fish)
+      this.scene.add(fish.mesh)
+    }
+  }
+  dispose() {}
+}
 export class Aquarium {
   renderTarget = new THREE.WebGLRenderTarget(16, 16, {
     minFilter: THREE.NearestFilter,
@@ -24,6 +67,10 @@ export class Aquarium {
   objects: AquaObject[] = []
   update(dt: number) {
     this.objects.forEach(obj => obj.update(dt))
+  }
+  clearObjects() {
+    for (const obj of this.objects) obj.dispose()
+    this.objects = []
   }
   renderToOffScreen(renderer: THREE.WebGLRenderer, size: number) {
     const { camera } = this

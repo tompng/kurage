@@ -5,7 +5,8 @@ import type { HitMap } from './hitmap'
 
 type XY = [number, number]
 type XYZ = [number, number, number]
-type HitFunc = (x: number, z: number) => boolean
+export type HitFunc2D = (x: number, z: number) => boolean
+export type HitFunc3D = (x: number, y: number, z: number) => boolean
 
 const shrimpOutline: [XY[], XY[]] = [
   [
@@ -250,7 +251,7 @@ export function createShrimpGeometryMaterial() {
 const [fishGeometry, fishShader] = createFishGeometryMaterial()
 const [shrimpGeometry, shrimpShader] = createShrimpGeometryMaterial()
 
-class Shrimp {
+export class Shrimp {
   phase = Math.random()
   mesh: THREE.Mesh
   jump = { x: 0, y: 0, z: 0 }
@@ -264,7 +265,30 @@ class Shrimp {
     this.th = this.thDst = 2 * Math.PI * Math.random()
     this.thz = this.thzDst = 0.4 * Math.random() - 0.2
   }
-  update(dt: number, hitFunc: HitFunc) {
+  update2D(dt: number, hitFunc: HitFunc2D) {
+    this.updateBase(dt)
+    const { position, jump } = this
+    const x2 = position.x + 2 * jump.x * dt
+    position.y += 2 * jump.y * dt
+    const z2 = position.z + 2 * jump.z * dt
+    if (!hitFunc(x2, z2)) {
+      position.x = x2
+      position.z = z2
+    }
+  }
+  update3D(dt: number, hitFunc: HitFunc3D) {
+    this.updateBase(dt)
+    const { position, jump } = this
+    const x2 = position.x + 2 * jump.x * dt
+    const y2 = position.y + 2 * jump.y * dt
+    const z2 = position.z + 2 * jump.z * dt
+    if (!hitFunc(x2, y2, z2)) {
+      position.x = x2
+      position.y = y2
+      position.z = z2
+    }
+  }
+  updateBase(dt: number) {
     const { position, jump } = this
     this.phase += Math.random() * dt
     if (this.phase > 1) {
@@ -284,13 +308,6 @@ class Shrimp {
     jump.z *= s
     this.th = this.th * s + (1 - s) * this.thDst
     this.thz = this.thz * s + (1 - s) * this.thzDst
-    const x2 = position.x + 2 * jump.x * dt
-    position.y += 2 * jump.y * dt
-    const z2 = position.z + 2 * jump.z * dt
-    if (!hitFunc(x2, z2)) {
-      position.x = x2
-      position.z = z2
-    }
   }
   updateForRender() {
     const { mesh, position, th } = this
@@ -304,7 +321,7 @@ class Shrimp {
   }
 }
 
-class Fish {
+export class Fish {
   position: Point3D
   phase = 2 * Math.PI * Math.random()
   phaseSpeed = 16 * (0.8 + 0.4 * Math.random())
@@ -321,8 +338,8 @@ class Fish {
     this.mesh = new Mesh(fishGeometry, fishShader)
     this.mesh.scale.set(0.1, 0.1, 0.1)
   }
-  update(dt: number, hitFunc: HitFunc) {
-    const { v, position, spawnPosition } = this
+  updateBase(dt: number) {
+    const { position, spawnPosition } = this
     const dirx = Math.cos(this.dir)
     const diry = Math.sin(this.dir)
     this.phase += this.phaseSpeed * dt
@@ -333,6 +350,10 @@ class Fish {
     this.dir += 8 * (cross * lr * lr + (Math.random() - 0.5)) * dt
     this.smoothDir = this.smoothDir * (1 - dt) + dt * this.dir
     this.dz = (Math.sin(this.zw1 * this.phase) + Math.sin(this.zw2 * this.phase)) / 4
+  }
+  update2D(dt: number, hitFunc: HitFunc2D) {
+    this.updateBase(dt)
+    const { v, position } = this
     const x2 = position.x + v * Math.cos(this.smoothDir) * dt
     position.y += v * Math.sin(this.smoothDir) * dt
     const z2 = position.z + v * this.dz * dt
@@ -341,6 +362,18 @@ class Fish {
       position.z = z2
     }
     if (position.z > -0.2) position.z = -0.2
+  }
+  update3D(dt: number, hitFunc: HitFunc3D) {
+    this.updateBase(dt)
+    const { v, position } = this
+    const x2 = position.x + v * Math.cos(this.smoothDir) * dt
+    const y2 = position.y + v * Math.sin(this.smoothDir) * dt
+    const z2 = position.z + v * this.dz * dt
+    if (!hitFunc(x2, y2, z2)) {
+      position.x = x2
+      position.y = y2
+      position.z = z2
+    }
   }
   updateForRender() {
     const { mesh, position, smoothDir } = this
@@ -422,7 +455,7 @@ export class FishShrimpCloud {
   mobs = new Set<Fish | Shrimp>()
   timer = 0
   maxCount = 64
-  constructor(public hitFunc: HitFunc) {}
+  constructor(public hitFunc: HitFunc2D) {}
   effects: { phase: number; particle: Particle }[] = []
   addEffect(x: number, z: number, color: number, dst: Point3D) {
     const particle = new Particle(x, z, color, dst)
@@ -436,7 +469,7 @@ export class FishShrimpCloud {
     mobs.forEach(mob => {
       const dist = distance(mob.position, center)
       if (dist < updateRadius) {
-        mob.update(dt, this.hitFunc)
+        mob.update2D(dt, this.hitFunc)
         mob.updateForRender()
         const { x, z } = mob.position
         if (hitMap.hitTest(x, z) || (tap && (x - tap.x) ** 2 + (z - tap.z) ** 2 < tapR2)) {

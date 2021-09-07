@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { curvePath } from "./curve_path" 
-import { Aquarium } from "./aquarium"
+import { Aquarium, Fishes, Shrimps } from "./aquarium"
 
 type SingleRendererManager = {
   renderer: THREE.WebGLRenderer
@@ -8,6 +8,10 @@ type SingleRendererManager = {
   release(): void
 }
 
+const aquariumSetups: [number, ((aquarium: Aquarium, radius: number) => void)][] = [
+  [2, (aq, r) => aq.objects.push(new Fishes(r))],
+  [2, (aq, r) => aq.objects.push(new Shrimps(r))]
+]
 export class BookComponent {
   dom: HTMLDivElement
   mode: number | null = null
@@ -33,9 +37,14 @@ export class BookComponent {
   }
   openTarget(index: number) {
     const { target } = this
-    if (target.phase !== 0) return
+    if (target.phase !== 0 || target.index != null) return
     target.dir = 1
     target.index = index
+    if (aquariumSetups[index]) {
+      const [r, f] = aquariumSetups[index]
+      this.aquarium.radius = r
+      f(this.aquarium, r)
+    }
     target.phase = 0.001
     if (target.fadeCanvas) return
     target.fadeCanvas = document.createElement('canvas')
@@ -138,9 +147,10 @@ export class BookComponent {
     renderer.domElement.style.opacity = String(target.phase)
     const width = dom.offsetWidth
     const height = dom.offsetHeight
-    renderer.setPixelRatio(devicePixelRatio)
+    const ratio = window.devicePixelRatio
+    renderer.setPixelRatio(ratio)
     renderer.setSize(width, height)
-    aquarium.renderToOffScreen(renderer, 512)
+    aquarium.renderToOffScreen(renderer, ratio * Math.min(width, height))
     aquarium.renderToScreen(renderer)
   }
   start() {
@@ -155,7 +165,7 @@ export class BookComponent {
     const dt = (time - this.lastUpdate) / 1000
     this.lastUpdate = time
     if (target.dir === -1 && target.phase === 0) return
-    this.aquarium.update(dt) // TODO: fixme
+    this.aquarium.update(Math.min(0.02, dt))
     if (target.dir === 1 && target.phase === 1) return
     target.phase += 4 * target.dir * dt
     if (target.phase >= 1) {
@@ -181,6 +191,7 @@ export class BookComponent {
     this.cleanupAquarium()
   }
   cleanupAquarium() {
+    this.aquarium.clearObjects()
     this.aquarium.compactAllocation()
     this.rendererManager.release()
     this.target.index = null
