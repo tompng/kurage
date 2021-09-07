@@ -1,8 +1,7 @@
-import { Ribbon, String3D } from './string'
+import { String3D } from './string'
 import { Jelly } from './jelly'
 import * as THREE from 'three'
-import { Point3D, normalize, scale as vectorScale, add as vectorAdd, sub as vectorSub, SmoothPoint3D } from './math'
-import { RibbonRenderer } from './ribbon_mesh'
+import { Point3D, normalize, sub as vectorSub } from './math'
 import textureUrl0 from './images/jelly/0.jpg'
 import textureUrl1 from './images/jelly/1.jpg'
 import textureUrl2 from './images/jelly/2.jpg'
@@ -14,6 +13,7 @@ import { BezierStringRenderer } from './string_mesh'
 import { Menu } from './menu'
 import { GearValue, GearComponent } from './gear_component'
 import { BookComponent } from './book_component'
+import { addClover, addHanagasa, addGaming, addLongString, addMiddleString, addShortString, addRibbonString } from './gear'
 
 const renderOnResize: (() => void)[] = []
 const textureUrls = [textureUrl0, textureUrl1, textureUrl2, textureUrl3, textureUrl4, textureUrl5]
@@ -36,13 +36,13 @@ document.querySelectorAll<HTMLDivElement>('.gear-select-body .gear-item').forEac
 function updateJellyByGearValue(values: GearValue) {
   const strings: [string, (jelly: Jelly) => void][] = []
   jelly.attachments = []
-  if (values[0].includes(0)) addClover(jelly)
-  if (values[0].includes(1)) strings.push(['hanagasa', addHanagasa])
-  if (values[0].includes(2)) addGaming(jelly)
+  if (values[0].includes(0)) addClover(jelly, stringRenderer)
+  if (values[0].includes(1)) strings.push(['hanagasa', j => addHanagasa(j, stringRenderer)])
+  if (values[0].includes(2)) addGaming(jelly, stringRenderer)
   jelly.updateTexture(textures[values[1]])
-  if (values[2].includes(0)) strings.push(['short', addShortString])
-  if (values[2].includes(1)) strings.push(['middle', addMiddleString])
-  if (values[2].includes(2)) strings.push(['long', addLongString])
+  if (values[2].includes(0)) strings.push(['short', j => addShortString(j, stringRenderer)])
+  if (values[2].includes(1)) strings.push(['middle', j => addMiddleString(j, stringRenderer)])
+  if (values[2].includes(2)) strings.push(['long', j => addLongString(j, stringRenderer)])
   if (values[3] === 0) strings.push(['ribbon', addRibbonString])
   const stringTypes = new Set<string | undefined>(strings.map(a => a[0]))
   jelly.strings = jelly.strings.filter(s => stringTypes.has(s.tag))
@@ -238,125 +238,7 @@ function addJelly(x: number, z: number) {
 
 assignGlobal({ addJelly, jellies })
 
-function addRibbonString(jelly: Jelly) {
-  const ribbonSegments = 20
-  const ribbonRenderer = new RibbonRenderer(ribbonSegments, 0.3, 0.3)
-  function renderRibbon(string: String3D, ribbon: Ribbon) {
-    ribbonRenderer.render(renderer, camera, string, ribbon)
-  }
-  for (let i = 0; i < 4; i++) {
-    const th = 2 * Math.PI * i / 4 + 1
-    const cos = Math.cos(th)
-    const sin = Math.sin(th)
-    jelly.addString(
-      {
-        pos: { x: 0.3 * cos, y: 0.3 * sin, z: 1 },
-        dir: { x: cos, y: sin, z: 10 },
-        n: 4,
-        f: 10
-      },
-      new String3D(ribbonSegments, 2, 1),
-      renderRibbon,
-      'ribbon',
-      true
-    )
-  }
-}
 
-function addMiddleString(jelly: Jelly) {
-  const whiteBlueStringProfile = stringRenderer.getPlainProfile({ l: 4, r: 5 }, 0.015, new THREE.Color(0xBFBFFF))
-  function requestWhiteBlueString(string: String3D) {
-    whiteBlueStringProfile.request(string.bezierSegments())
-  }
-  for (let i = 0; i < 8; i++) {
-    const th = 2 * Math.PI * (i + 0.5) / 8
-    const cos = Math.cos(th)
-    const sin = Math.sin(th)
-    jelly.addString(
-      {
-        pos: { x: 0.98 * cos, y: 0.98 * sin, z: 0.9 },
-        dir: { x: cos, y: sin, z: 4 },
-        n: 6,
-        f: 10
-      },
-      new String3D(40, 1.4 + 0.2 * Math.random(), 0.5),
-      requestWhiteBlueString,
-      'middle'
-    )
-  }
-}
-
-function addLongString(jelly: Jelly) {
-  const whiteBlueStringProfile = stringRenderer.getPlainProfile({ l: 4, r: 5 }, 0.015, new THREE.Color(0xBFBFFF))
-  function requestWhiteBlueString(string: String3D) {
-    whiteBlueStringProfile.request(string.bezierSegments())
-  }
-  for (let i = 0; i < 8; i++) {
-    const th = 2 * Math.PI * i / 8
-    const cos = Math.cos(th)
-    const sin = Math.sin(th)
-    jelly.addString(
-      {
-        pos: { x: 0.98 * cos, y: 0.98 * sin, z: 0.9 },
-        dir: { x: cos, y: sin, z: 4 },
-        n: 10,
-        f: 10
-      },
-      new String3D(100, 3 + 0.5 * Math.random(), 1.5),
-      requestWhiteBlueString,
-      'long'
-    )
-  }
-}
-
-function addShortString(jelly: Jelly) {
-  const thinStringProfile = stringRenderer.getPlainProfile({ l: 4, r: 5 }, 0.008, new THREE.Color(0xBFBFFF))
-  function requestThinString(string: String3D) {
-    thinStringProfile.request(string.bezierSegments())
-  }
-  for (let i = 0; i < 128; i++) {
-    const th = 2 * Math.PI * i / 128
-    const cos = Math.cos(th)
-    const sin = Math.sin(th)
-    jelly.addString(
-      {
-        pos: { x: cos, y: sin, z: 1 },
-        dir: { x: cos, y: sin, z: 4 },
-        n: 4,
-        f: 10
-      },
-      new String3D(5, 0.2 + 0.1 * Math.random(), 0.1),
-      requestThinString,
-      'short'
-    )
-  }
-}
-
-function addHanagasa(jelly: Jelly) {
-  const varyingStringProfile = stringRenderer.getVaryingProfile({ l: 4, r: 5 }, 0.015)
-  function requestHanagasaString(string: String3D) {
-    varyingStringProfile.request(string.bezierSegmentsWithColor({ r: 0.4, g: 0.5, b: 0.5 }, { r: 0.6, g: 0, b: 0 }))
-  }
-  for (let i = 0; i < 64; i++) {
-    const th = 2 * Math.PI * i / 64
-    const cos = Math.cos(th)
-    const sin = Math.sin(th)
-    const rth = Math.PI / 2 * Math.sqrt(Math.random())
-    const r = Math.sin(rth)
-    let z = Math.cos(rth)
-    jelly.addString(
-      {
-        pos: { x: r * cos, y: r * sin, z: 1 - z },
-        dir: { x: 0, y: 0, z: -1 },
-        n: 4,
-        f: 10
-      },
-      new String3D(10, 0.15, 0.1),
-      requestHanagasaString,
-      'hanagasa'
-    )
-  }
-}
 
 assignGlobal({ player })
 function frame() {
@@ -375,97 +257,6 @@ requestAnimationFrame(frame)
 
 assignGlobal({ jelly, renderer })
 
-function addClover(jelly: Jelly) {
-  const clovers = [0, 1, 2, 3].map(i => {
-    const th = Math.PI * i / 2
-    const cos = Math.cos(th)
-    const sin = Math.sin(th)
-    const rand = (a: number) => a * (2 * Math.random() - 1)
-    const line: Point3D[] = []
-    for (let i = 0; i <= 10; i++) {
-      const t = (2 * i / 10 - 1) * 3
-      const x = 0.2 + 0.12 * Math.cos(t) + rand(0.01)
-      const y = 0.12 * Math.sin(t) + rand(0.01)
-      const z = 0.6 + rand(0.015) + x * x / 4
-      line.push({
-        x: x * cos - y * sin,
-        y: x * sin + y * cos,
-        z
-      })
-    }
-    return line
-  })
-  const cloverStringProfile = stringRenderer.getPlainProfile({ l: 6, r: 12 }, 0.03, new THREE.Color(0xff8844))
-  function renderCloverAttachment(positions: Point3D[]) {
-    cloverStringProfile.request(
-      [...new Array(positions.length - 3)].map((_, i) => {
-        const a = positions[i]
-        const b = positions[i + 1]
-        const c = positions[i + 2]
-        const d = positions[i + 3]
-        return [
-          b,
-          vectorAdd(b, vectorScale(vectorSub(c, a), 1 / 6)),
-          vectorAdd(c, vectorScale(vectorSub(d, b), -1 / 6)),
-          c
-        ]
-      }),
-    )
-  }
-  clovers.forEach(positions => {
-    jelly.addAttachment(positions, renderCloverAttachment)
-  })
-}
-
-function addGaming(jelly: Jelly) {
-  const n = 16
-  const gamingStringProfile = stringRenderer.getVaryingProfile({ l: 6, r: 12 }, 0.02)
-  function renderGamingAttachment(positions: Point3D[]) {
-    const time = performance.now() / 1000
-    function colorAt(t: number) {
-      const brightness = t * 6
-      return {
-        r: Math.max(0, 0.5 + Math.cos(time + 4 * t)) * brightness,
-        g: Math.max(0, 0.5 + Math.cos(time + 4 * t + 2 * Math.PI / 3)) * brightness,
-        b: Math.max(0, 0.5 + Math.cos(time + 4 * t + 4 * Math.PI / 3)) * brightness
-      }
-    }
-    gamingStringProfile.request(
-      [...new Array(positions.length - 3)].map((_, i) => {
-        const t1 = i / positions.length
-        const t2 = (i + 1) / positions.length
-        const a = positions[i]
-        const b = positions[i + 1]
-        const c = positions[i + 2]
-        const d = positions[i + 3]
-        return [
-          b,
-          vectorAdd(b, vectorScale(vectorSub(c, a), 1 / 6)),
-          vectorAdd(c, vectorScale(vectorSub(d, b), -1 / 6)),
-          c,
-          colorAt(t1),
-          colorAt(t2)
-        ]
-      }),
-    )
-  }
-  for (let i = 0; i < n; i++) {
-    const th = 2 * Math.PI * i / n
-    const cos = Math.cos(th)
-    const sin = Math.sin(th)
-    const line: Point3D[] = []
-    const m = 8
-    for (let j = 0; j <= m; j++) {
-      const rth = Math.PI * j / m / 2
-      const r = Math.sin(rth)
-      const z = 1 - Math.cos(rth)
-      const randFactor = 0.5 * (1 - j / m) * j / m
-      const xyrand = randFactor * (Math.random() - 0.5) / 4
-      line.push({ x: r * cos - xyrand * sin, y: r * sin + xyrand * cos, z: z + Math.random() * randFactor })
-    }
-    jelly.addAttachment(line, renderGamingAttachment)
-  }
-}
 
 function render() {
   const size = new THREE.Vector2()

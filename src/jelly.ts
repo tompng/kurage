@@ -32,7 +32,7 @@ type Cell = {
   geometry: THREE.BufferGeometry
 }
 
-type StringRenderFunc = (string: String3D, ribbon: Ribbon) => void
+type StringRenderFunc = (string: String3D, ribbon: Ribbon, renderer: THREE.WebGLRenderer, camera: THREE.Camera) => void
 type AttachmentRenderFunc = (positions: Point3D[]) => void
 
 type Connectivity = {
@@ -445,7 +445,7 @@ export class Jelly {
     this.attachments.forEach(({ positions, render }) => {
       render(positions.map(p => this.transformGridPoint(p)))
     })
-    this.strings.forEach(({ string, ribbon, render }) => render(string, ribbon!))
+    this.strings.forEach(({ string, ribbon, render }) => render(string, ribbon!, renderer, camera))
   }
   dispose() {
     this.cells.forEach(cell => {
