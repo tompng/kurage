@@ -51,15 +51,6 @@ function updateJellyByGearValue(values: GearValue) {
     if (!remainings.has(tag)) add(jelly)
   }
 }
-menu.components.gear = new GearComponent(gearValue, values => {
-  updateJellyByGearValue(values)
-  render()
-})
-menu.components.book = new BookComponent()
-const mapComponentDOM = document.querySelector<HTMLDivElement>('#map')!
-mapComponentDOM.remove()
-menu.components.map = { dom: mapComponentDOM }
-
 renderOnResize.push(() => menu.reRender())
 menu.onOpen = () => {
   if (!(window as any).stopAt) {
@@ -93,6 +84,32 @@ const uiCtx = uiCanvas.getContext('2d')!
 renderer.domElement.style.width = uiCanvas.style.width = '100%'
 renderer.domElement.style.height = uiCanvas.style.height = '100%'
 mainDiv.appendChild(renderer.domElement)
+const rendererManager = {
+  styleWas: null as string | null,
+  use() {
+    if (!this.styleWas) this.styleWas = renderer.domElement.style.cssText
+    return renderer.domElement
+  },
+  release() {
+    if (this.styleWas) renderer.domElement.style.cssText = this.styleWas
+    renderer.domElement.className = ''
+    mainDiv.insertBefore(renderer.domElement, uiCanvas)
+    render()
+  },
+  renderer
+}
+
+menu.components.gear = new GearComponent(gearValue, values => {
+  updateJellyByGearValue(values)
+  render()
+})
+menu.components.book = new BookComponent(rendererManager)
+const mapComponentDOM = document.querySelector<HTMLDivElement>('#map')!
+mapComponentDOM.remove()
+menu.components.map = { dom: mapComponentDOM }
+
+
+
 mainDiv.appendChild(uiCanvas)
 const fullSquareStyle = document.createElement('style')
 document.head.appendChild(fullSquareStyle)
