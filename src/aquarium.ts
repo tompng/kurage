@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { BezierStringRenderer } from './string_mesh'
 import { Point3D, Point2D, randomDirection } from './math'
-import { Fish, Shrimp, HitFunc3D } from './fish_shrimp'
+import { Fish, Shrimp } from './fish_shrimp'
 
 type AquaObject = {
   update(dt: number): void
@@ -11,14 +11,11 @@ type AquaObject = {
 
 class FishShrimpsBase {
   scene = new THREE.Scene()
-  objects: { update3D(dt: number, hitFunc: HitFunc3D): void; updateForRender(): void }[] = []
-  hitFunc: HitFunc3D
-  constructor(radius: number) {
-    const radius2 = radius * radius
-    this.hitFunc = (x, y, z) => x * x + y * y + z * z > radius2
+  objects: { update3D(dt: number, radius: number): void; updateForRender(): void }[] = []
+  constructor(public radius: number) {
   }
   update(dt: number) {
-    for (const obj of this.objects) obj.update3D(dt, this.hitFunc)
+    for (const obj of this.objects) obj.update3D(dt, this.radius)
   }
   render(renderer: THREE.WebGLRenderer, camera: THREE.Camera) {
     for (const obj of this.objects) obj.updateForRender()
@@ -29,7 +26,7 @@ class FishShrimpsBase {
 export class Fishes extends FishShrimpsBase {
   constructor(radius: number) {
     super(radius)
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < 32; i++) {
       const fish = new Fish(randomDirection(radius * 0.8))
       this.objects.push(fish)
       this.scene.add(fish.mesh)
@@ -41,7 +38,7 @@ export class Fishes extends FishShrimpsBase {
 export class Shrimps extends FishShrimpsBase {
   constructor(radius: number) {
     super(radius)
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < 32; i++) {
       const fish = new Shrimp(randomDirection(radius * 0.8))
       this.objects.push(fish)
       this.scene.add(fish.mesh)

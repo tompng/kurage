@@ -5,8 +5,7 @@ import type { HitMap } from './hitmap'
 
 type XY = [number, number]
 type XYZ = [number, number, number]
-export type HitFunc2D = (x: number, z: number) => boolean
-export type HitFunc3D = (x: number, y: number, z: number) => boolean
+export type HitFunc = (x: number, z: number) => boolean
 
 const shrimpOutline: [XY[], XY[]] = [
   [
@@ -265,7 +264,7 @@ export class Shrimp {
     this.th = this.thDst = 2 * Math.PI * Math.random()
     this.thz = this.thzDst = 0.4 * Math.random() - 0.2
   }
-  update2D(dt: number, hitFunc: HitFunc2D) {
+  update2D(dt: number, hitFunc: HitFunc) {
     this.updateBase(dt)
     const { position, jump } = this
     const x2 = position.x + 2 * jump.x * dt
@@ -276,16 +275,28 @@ export class Shrimp {
       position.z = z2
     }
   }
-  update3D(dt: number, hitFunc: HitFunc3D) {
+  update3D(dt: number, radius: number) {
     this.updateBase(dt)
     const { position, jump } = this
-    const x2 = position.x + 2 * jump.x * dt
-    const y2 = position.y + 2 * jump.y * dt
-    const z2 = position.z + 2 * jump.z * dt
-    if (!hitFunc(x2, y2, z2)) {
-      position.x = x2
-      position.y = y2
-      position.z = z2
+    const x = position.x + 2 * jump.x * dt
+    const y = position.y + 2 * jump.y * dt
+    const z = position.z + 2 * jump.z * dt
+    const r2 = x * x + y * y + z * z
+    if (r2 > radius * radius) {
+      const r = Math.sqrt(r2)
+      const scale = radius / r
+      position.x = x * scale
+      position.y = y * scale
+      position.z = z * scale
+      const dot = (jump.x * x + jump.y * y + jump.z * z) / r
+      const s = 2 * dot / r
+      jump.x -= s * x
+      jump.y -= s * y
+      jump.z -= s * z
+    } else {
+      position.x = x
+      position.y = y
+      position.z = z
     }
   }
   updateBase(dt: number) {
@@ -351,7 +362,7 @@ export class Fish {
     this.smoothDir = this.smoothDir * (1 - dt) + dt * this.dir
     this.dz = (Math.sin(this.zw1 * this.phase) + Math.sin(this.zw2 * this.phase)) / 4
   }
-  update2D(dt: number, hitFunc: HitFunc2D) {
+  update2D(dt: number, hitFunc: HitFunc) {
     this.updateBase(dt)
     const { v, position } = this
     const x2 = position.x + v * Math.cos(this.smoothDir) * dt
@@ -363,16 +374,22 @@ export class Fish {
     }
     if (position.z > -0.2) position.z = -0.2
   }
-  update3D(dt: number, hitFunc: HitFunc3D) {
+  update3D(dt: number, radius: number) {
     this.updateBase(dt)
     const { v, position } = this
-    const x2 = position.x + v * Math.cos(this.smoothDir) * dt
-    const y2 = position.y + v * Math.sin(this.smoothDir) * dt
-    const z2 = position.z + v * this.dz * dt
-    if (!hitFunc(x2, y2, z2)) {
-      position.x = x2
-      position.y = y2
-      position.z = z2
+    const x = position.x + v * Math.cos(this.smoothDir) * dt
+    const y = position.y + v * Math.sin(this.smoothDir) * dt
+    const z = position.z + v * this.dz * dt
+    const r2 = x * x + y * y + z * z
+    if (r2 > radius * radius) {
+      const scale = radius / Math.sqrt(r2)
+      position.x = x * scale
+      position.y = y * scale
+      position.z = z * scale
+    } else {
+      position.x = x
+      position.y = y
+      position.z = z
     }
   }
   updateForRender() {
@@ -455,7 +472,7 @@ export class FishShrimpCloud {
   mobs = new Set<Fish | Shrimp>()
   timer = 0
   maxCount = 64
-  constructor(public hitFunc: HitFunc2D) {}
+  constructor(public hitFunc: HitFunc) {}
   effects: { phase: number; particle: Particle }[] = []
   addEffect(x: number, z: number, color: number, dst: Point3D) {
     const particle = new Particle(x, z, color, dst)
