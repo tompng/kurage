@@ -85,13 +85,11 @@ renderer.domElement.style.width = uiCanvas.style.width = '100%'
 renderer.domElement.style.height = uiCanvas.style.height = '100%'
 mainDiv.appendChild(renderer.domElement)
 const rendererManager = {
-  styleWas: null as string | null,
   use() {
-    if (!this.styleWas) this.styleWas = renderer.domElement.style.cssText
     return renderer.domElement
   },
   release() {
-    if (this.styleWas) renderer.domElement.style.cssText = this.styleWas
+    renderer.domElement.style.cssText = 'width: 100%; height: 100%;'
     renderer.domElement.className = ''
     mainDiv.insertBefore(renderer.domElement, uiCanvas)
     render()
