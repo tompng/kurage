@@ -10,6 +10,9 @@ type AquaObject = {
   dispose(): void
 }
 
+function randomSpherePos(radius: number) {
+  return randomDirection(radius * Math.pow(Math.random(), 1 / 3))
+}
 class FishShrimpsBase {
   scene = new THREE.Scene()
   objects: { update3D(dt: number, radius: number): void; updateForRender(yscale: number): void }[] = []
@@ -28,7 +31,7 @@ export class Fishes extends FishShrimpsBase {
   constructor(radius: number) {
     super(radius)
     for (let i = 0; i < 32; i++) {
-      const fish = new Fish(randomDirection(radius * 2 / 3))
+      const fish = new Fish(randomSpherePos(radius * 0.9))
       this.objects.push(fish)
       this.scene.add(fish.mesh)
     }
@@ -40,7 +43,7 @@ export class Shrimps extends FishShrimpsBase {
   constructor(radius: number) {
     super(radius)
     for (let i = 0; i < 32; i++) {
-      const fish = new Shrimp(randomDirection(radius * 2 / 3))
+      const fish = new Shrimp(randomSpherePos(radius * 0.9))
       this.objects.push(fish)
       this.scene.add(fish.mesh)
     }
