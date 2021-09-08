@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { BezierStringRenderer } from './string_mesh'
-import { randomDirection } from './math'
+import { Point3D, Point2D, randomDirection } from './math'
 import { Fish, Shrimp, HitFunc3D } from './fish_shrimp'
 
 type AquaObject = {
@@ -49,10 +49,76 @@ export class Shrimps extends FishShrimpsBase {
   }
   dispose() {}
 }
+
+function createHalfSphereGeometry(n = 16) {
+  const positions: number[] = []
+  const uvs: number[] = []
+  type Coord = [Point3D, Point2D]
+  let prev: Coord[] = [[{ x: 0, y: 0, z: 1 }, { x: 0, y: 0 }]]
+  function addTriangle(a: Coord, b: Coord, c: Coord) {
+    for (const [p, uv] of [a, b, c]) {
+      positions.push(p.x, p.y, p.z)
+      uvs.push((1 + uv.x) / 2, (1+ uv.y) / 2)
+    }
+  }
+  for (let i = 1; i <= n; i++) {
+    const t = i / n
+    const a = 0.5
+    const zth = Math.PI / 2 * (t + a * t * (1 - t))
+    const z = Math.cos(zth)
+    const r = Math.sin(zth)
+    const current: Coord[] = []
+    const m = Math.round(4 * r * n / (1 + a * (1 - 2 * t)))
+    const uvr = (r + 2 * Math.asin(r) / Math.PI) / 2
+    for (let i = 0; i < m; i++) {
+      const th = 2 * Math.PI * i / m
+      const cos = Math.cos(th)
+      const sin = Math.sin(th)
+      current.push([
+        { x: r * cos, y: r * sin, z },
+        { x: uvr * cos, y: uvr * sin }
+      ])
+    }
+    let j = 0, k = 0
+    while(j + 1 < prev.length || k + 1 < current.length) {
+      if ((j + 1) / prev.length < (k + 1) / current.length) {
+        addTriangle(prev[j], current[k], prev[j + 1])
+        j ++
+      } else {
+        addTriangle(prev[j], current[k], current[k + 1])
+        k ++
+      }
+    }
+    if (prev.length > 1) addTriangle(prev[j], current[k], prev[0])
+    addTriangle(prev[0], current[k], current[0])
+    prev = current
+  }
+  const geometry = new THREE.BufferGeometry()
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
+  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2))
+  return geometry
+}
+
+const sphereVertexShader = `
+varying vec2 vTexcoord;
+void main() {
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1);
+  vTexcoord = uv;
+}
+`
+
+const sphereFragmentShader = `
+uniform sampler2D map;
+varying vec2 vTexcoord;
+void main() {
+  gl_FragColor = texture2D(map, vTexcoord) + vec4(0.2, 0.2, 0.2, 1);
+}
+`
+
 export class Aquarium {
   renderTarget = new THREE.WebGLRenderTarget(16, 16, {
-    minFilter: THREE.NearestFilter,
-    magFilter: THREE.NearestFilter,
+    minFilter: THREE.LinearFilter,
+    magFilter: THREE.LinearFilter,
     type: THREE.HalfFloatType
   })
   offscreenCamera = new THREE.PerspectiveCamera(90, 1, 0.1, 32)
@@ -60,9 +126,13 @@ export class Aquarium {
   camera = new THREE.Camera()
   stringRenderer = new BezierStringRenderer()
   constructor(public radius: number) {
-    const refractMesh = new THREE.Mesh(new THREE.PlaneBufferGeometry(), new THREE.MeshBasicMaterial({ map: this.renderTarget.texture }))
-    refractMesh.scale.set(2, 2, 2)
-    this.scene.add(refractMesh)
+    const material = new THREE.ShaderMaterial({
+      uniforms: { map: { value: this.renderTarget.texture }},
+      vertexShader: sphereVertexShader,
+      fragmentShader: sphereFragmentShader
+    })
+    const sphere = new THREE.Mesh(createHalfSphereGeometry(), material)
+    this.scene.add(sphere)
   }
   objects: AquaObject[] = []
   update(dt: number) {
@@ -75,9 +145,11 @@ export class Aquarium {
   renderToOffScreen(renderer: THREE.WebGLRenderer, size: number) {
     const { offscreenCamera } = this
     offscreenCamera.up.set(0, 0, 1)
-    offscreenCamera.position.set(0, -Math.SQRT2 * this.radius, 0)
+    const cameraPosRatio = 0.8
+    offscreenCamera.position.set(0, -Math.SQRT2 * this.radius * cameraPosRatio, 0)
     offscreenCamera.lookAt(0, 0, 0)
-    this.renderTarget.setSize(size, size)
+    const offscreenSize = Math.ceil(size * 1.5)
+    this.renderTarget.setSize(offscreenSize, offscreenSize)
     renderer.setRenderTarget(this.renderTarget)
     renderer.autoClear = false
     renderer.clearColor()
@@ -95,8 +167,9 @@ export class Aquarium {
     if (width < height) {
       fov = 2 * Math.atan(Math.tan(Math.PI * fov / 180 / 2) / aspect) * 180 / Math.PI
     }
-    // this.camera = new THREE.PerspectiveCamera(fov, aspect, 1, 16)
-
+    this.camera = new THREE.PerspectiveCamera(fov, aspect, 1 / 8, 8)
+    this.camera.position.set(0, 0, 2.5)
+    this.camera.lookAt(0, 0, 0)
     renderer.render(this.scene, this.camera)
   }
   compactAllocation() {

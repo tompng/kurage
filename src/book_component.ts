@@ -9,8 +9,8 @@ type SingleRendererManager = {
 }
 
 const aquariumSetups: [number, ((aquarium: Aquarium, radius: number) => void)][] = [
-  [2, (aq, r) => aq.objects.push(new Fishes(r))],
-  [2, (aq, r) => aq.objects.push(new Shrimps(r))]
+  [3, (aq, r) => aq.objects.push(new Fishes(r))],
+  [3, (aq, r) => aq.objects.push(new Shrimps(r))]
 ]
 export class BookComponent {
   dom: HTMLDivElement
