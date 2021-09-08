@@ -195,7 +195,7 @@ void main() {
   }
   vec3 reflectColor = reflectBrightness * vReflect.z * vReflect.z * b * vec3(0.5, 0.5, 0.5);
   gl_FragColor = vec4(
-    texture2D(map, vTexcoord).rgb + color + density * vec3(0.2, 0.2, 0.4) + reflectColor,
+    texture2D(map, vTexcoord).rgb + color + density * vec3(0.1, 0.1, 0.2) + reflectColor,
     alpha
   );
 }

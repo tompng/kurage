@@ -68,19 +68,78 @@ const stringRenderer = new BezierStringRenderer()
 const texture = textures[3]
 const jelly = new Jelly(6, texture)
 
-aquariumSetups.push([
-  6, (aq, r) => {
-    for (let i = 0; i < 3; i++) {
-      const jelly = new Jelly(6, textures[1])
-      const j = new AquariumJelly(r, jelly)
-      addClover(jelly, aq.stringRenderer)
-      addShortString(jelly, aq.stringRenderer)
-      addRibbonString(jelly)
-      aq.objects.push(j)
-      assignGlobal({ aqj: j })
+aquariumSetups.push(
+  [
+    6, (aq, r) => {
+      for (let i = 0; i < 3; i++) {
+        const jelly = new Jelly(6, textures[1])
+        const j = new AquariumJelly(r, jelly)
+        addClover(jelly, aq.stringRenderer)
+        addShortString(jelly, aq.stringRenderer)
+        addRibbonString(jelly)
+        aq.objects.push(j)
+        assignGlobal({ aqj: j })
+      }
     }
-  }
-])
+  ],
+  [
+    6, (aq, r) => {
+      for (let i = 0; i < 3; i++) {
+        const jelly = new Jelly(6, textures[2])
+        const j = new AquariumJelly(r, jelly)
+        addMiddleString(jelly, aq.stringRenderer, 32)
+        aq.objects.push(j)
+        assignGlobal({ aqj: j })
+      }
+    }
+  ],
+  [
+    6, (aq, r) => {
+      for (let i = 0; i < 2; i++) {
+        const jelly = new Jelly(6, textures[3])
+        const j = new AquariumJelly(r, jelly)
+        addLongString(jelly, aq.stringRenderer, 16)
+        addRibbonString(jelly)
+        aq.objects.push(j)
+        assignGlobal({ aqj: j })
+      }
+    }
+  ],
+  [
+    6, (aq, r) => {
+      for (let i = 0; i < 3; i++) {
+        const jelly = new Jelly(6, textures[4])
+        const j = new AquariumJelly(r, jelly)
+        addMiddleString(jelly, aq.stringRenderer, 32)
+        addHanagasa(jelly, aq.stringRenderer)
+        aq.objects.push(j)
+        assignGlobal({ aqj: j })
+      }
+    }
+  ],
+  [
+    6, (aq, r) => {
+      for (let i = 0; i < 2; i++) {
+        const jelly = new Jelly(6, textures[0])
+        const j = new AquariumJelly(r, jelly)
+        addLongString(jelly, aq.stringRenderer, 16)
+        aq.objects.push(j)
+        assignGlobal({ aqj: j })
+      }
+    }
+  ],
+  [
+    8, (aq, r) => {
+      for (let i = 0; i < 4; i++) {
+        const jelly = new Jelly(6, textures[5])
+        const j = new AquariumJelly(r, jelly)
+        addRibbonString(jelly)
+        aq.objects.push(j)
+        assignGlobal({ aqj: j })
+      }
+    }
+  ],
+)
 
 
 jelly.setPosition({ x: 0, y: 0, z: -2 }, { x: -1, y: 0, z: 0.1 })

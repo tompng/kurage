@@ -48,6 +48,9 @@ type StringInfo = Connectivity & {
   render: StringRenderFunc
   ribbon?: Ribbon
 }
+
+const generatedGridGeometries = new Map<number, (THREE.BufferGeometry | null)[][]>()
+
 export class Jelly {
   position: Point3D = { x: 0, y: 0, z: 0 }
   rotation = new Matrix3()
@@ -80,7 +83,11 @@ export class Jelly {
         }
       }
     }
-    const gridGeometries = createJellyGeometryGrids(segments)
+    let gridGeometries = generatedGridGeometries.get(segments)
+    if (!gridGeometries) {
+      gridGeometries = createJellyGeometryGrids(segments)
+      generatedGridGeometries.set(segments, gridGeometries)
+    }
     gridGeometries.forEach((geometries, i) => {
       return geometries.forEach((geometry, j) => {
         if (!geometry) return
@@ -449,7 +456,6 @@ export class Jelly {
   }
   dispose() {
     this.cells.forEach(cell => {
-      cell.geometry.dispose()
       cell.material.dispose()
     })
   }

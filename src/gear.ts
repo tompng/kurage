@@ -138,13 +138,13 @@ export function addRibbonString(jelly: Jelly) {
   }
 }
 
-export function addMiddleString(jelly: Jelly, stringRenderer: BezierStringRenderer) {
+export function addMiddleString(jelly: Jelly, stringRenderer: BezierStringRenderer, n = 8) {
   const whiteBlueStringProfile = stringRenderer.getPlainProfile({ l: 4, r: 5 }, 0.015, new THREE.Color(0xBFBFFF))
   function requestWhiteBlueString(string: String3D) {
     whiteBlueStringProfile.request(string.bezierSegments())
   }
-  for (let i = 0; i < 8; i++) {
-    const th = 2 * Math.PI * (i + 0.5) / 8
+  for (let i = 0; i < n; i++) {
+    const th = 2 * Math.PI * (i + 0.5) / n
     const cos = Math.cos(th)
     const sin = Math.sin(th)
     jelly.addString(
@@ -161,13 +161,13 @@ export function addMiddleString(jelly: Jelly, stringRenderer: BezierStringRender
   }
 }
 
-export function addLongString(jelly: Jelly, stringRenderer: BezierStringRenderer) {
+export function addLongString(jelly: Jelly, stringRenderer: BezierStringRenderer, n = 8) {
   const whiteBlueStringProfile = stringRenderer.getPlainProfile({ l: 4, r: 5 }, 0.015, new THREE.Color(0xBFBFFF))
   function requestWhiteBlueString(string: String3D) {
     whiteBlueStringProfile.request(string.bezierSegments())
   }
-  for (let i = 0; i < 8; i++) {
-    const th = 2 * Math.PI * i / 8
+  for (let i = 0; i < n; i++) {
+    const th = 2 * Math.PI * i / n
     const cos = Math.cos(th)
     const sin = Math.sin(th)
     jelly.addString(
@@ -184,13 +184,13 @@ export function addLongString(jelly: Jelly, stringRenderer: BezierStringRenderer
   }
 }
 
-export function addShortString(jelly: Jelly, stringRenderer: BezierStringRenderer) {
+export function addShortString(jelly: Jelly, stringRenderer: BezierStringRenderer, n = 128) {
   const thinStringProfile = stringRenderer.getPlainProfile({ l: 4, r: 5 }, 0.01, new THREE.Color(0xBFBFFF))
   function requestThinString(string: String3D) {
     thinStringProfile.request(string.bezierSegments())
   }
-  for (let i = 0; i < 128; i++) {
-    const th = 2 * Math.PI * i / 128
+  for (let i = 0; i < n; i++) {
+    const th = 2 * Math.PI * i / n
     const cos = Math.cos(th)
     const sin = Math.sin(th)
     jelly.addString(
