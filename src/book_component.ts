@@ -195,7 +195,7 @@ export class BookComponent {
     this.cleanupAquarium()
   }
   cleanupAquarium() {
-    this.aquarium.clearObjects()
+    this.aquarium.clear()
     this.aquarium.compactAllocation()
     this.rendererManager.release()
     this.aquarium.dom.remove()

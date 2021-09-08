@@ -99,34 +99,45 @@ function createHalfSphereGeometry(n = 16) {
 
 const sphereVertexShader = `
 varying vec2 vTexcoord;
-varying float alpha, density;
-#define FLOORZ -1.05
+varying float alpha, density, reflectBrightness;
+varying vec3 color, vPosition, vReflect;
 void main() {
   vTexcoord = uv;
   gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1);
   vec3 gpos = (modelMatrix * vec4(position, 1)).xyz;
+  vPosition = gpos;
   vec3 view = normalize(gpos - cameraPosition);
   vec3 norm = normalize(gpos);
   float vndot = dot(view, norm);
   density = 0.8 - 0.4 * vndot;
   alpha = min(-16.0 * vndot, (0.8 - 0.2 * vndot));
-  vec3 refl = view - 2.0 * vndot * norm;
+  vReflect = view - 2.0 * vndot * norm;
   vec3 refr = normalize(view - 0.1 * norm);
-  vec2 floorRefr = gpos.xy + refr.xy * (FLOORZ-gpos.z) / refr.z;
-  color = vec3(0.15, 0.15, 0.2) / (1.0 + 4.0 * dot(floorRefr, floorRefr));
-  // color = max(dot(ref, vec3(0.2, 0.3, 1)), 0.0) * vec3(0.2, 0.2, 0.2);
-  // color = vec3(0, 0, 0);
-  // color.r = max(ref.z, 0.0);
+  vec2 floorRefr = gpos.xy + refr.xy * (FLOORZ - gpos.z) / refr.z;
+  color = vec3(0.15, 0.15, 0.2) / (1.0 + 2.0 * dot(floorRefr, floorRefr));
+  reflectBrightness = 1.0 - vndot;
 }
 `
 
 const sphereFragmentShader = `
 uniform sampler2D map;
 varying vec2 vTexcoord;
-varying float alpha, density;
-varying vec3 color;
+varying float alpha, density, reflectBrightness;
+varying vec3 color, vPosition, vReflect;
 void main() {
-  gl_FragColor = vec4(texture2D(map, vTexcoord).rgb + color + density * vec3(0.2, 0.2, 0.4), alpha);
+  vec2 ss = sin(vReflect.xy / vReflect.z);
+  float b;
+  if (vReflect.z > 0.0) {
+    b = 0.5 * max(sin(2.0 * vReflect.x / vReflect.z) * cos(2.0 * vReflect.y / vReflect.z) - 0.5, 0.0);
+  } else {
+    vec2 floor = vPosition.xy + vReflect.xy * (FLOORZ - vPosition.z) / vReflect.z;
+    b = 0.5 / (1.0 + 2.0 * dot(floor.xy, floor.xy));
+  }
+  vec3 reflectColor = reflectBrightness * vReflect.z * vReflect.z * b * vec3(0.5, 0.5, 0.5);
+  gl_FragColor = vec4(
+    texture2D(map, vTexcoord).rgb + color + density * vec3(0.2, 0.2, 0.4) + reflectColor,
+    alpha
+  );
 }
 `
 
@@ -142,8 +153,8 @@ void main() {
 const floorFragmentShader = `
 varying vec2 vxy;
 void main() {
-  float brightness = 1.0 / (1.0 + 2.0 * dot(vxy, vxy)) - 0.01;
-  gl_FragColor = vec4(vec3(0.3, 0.3, 0.4) * brightness, 1);
+  float brightness = 1.0 / (1.0 + 2.0 * dot(vxy, vxy));
+  gl_FragColor = vec4(vec3(0.4, 0.4, 0.5) * brightness, 1);
 }
 
 `
@@ -163,10 +174,12 @@ export class Aquarium {
   }
   radius = 1
   constructor(public dom: HTMLDivElement) {
+    const floorZ = -1.05
     const material = new THREE.ShaderMaterial({
       uniforms: { map: { value: this.renderTarget.texture }},
       vertexShader: sphereVertexShader,
       fragmentShader: sphereFragmentShader,
+      defines: { FLOORZ: floorZ },
       transparent: true,
       blending: THREE.NormalBlending
     })
@@ -178,8 +191,8 @@ export class Aquarium {
         fragmentShader: floorFragmentShader
       })
     )
-    floor.scale.set(8, 8, 1)
-    floor.position.z = -1.05
+    floor.scale.set(16, 16, 1)
+    floor.position.z = floorZ
     this.scene.add(floor)
     this.scene.add(this.sphere)
     let pointer: { id: number; x: number; y: number } | null = null
@@ -207,7 +220,9 @@ export class Aquarium {
   update(dt: number) {
     this.objects.forEach(obj => obj.update(dt))
   }
-  clearObjects() {
+  clear() {
+    this.direction.thetaXY = 0
+    this.direction.thetaZ = 0
     for (const obj of this.objects) obj.dispose()
     this.objects = []
   }
@@ -255,10 +270,6 @@ export class Aquarium {
     camera.up.set(0, 0, 1)
     camera.lookAt(0, 0, 0)
     renderer.render(this.scene, camera)
-
-    // const scene = new THREE.Scene()
-    // scene.add(new THREE.Mesh(new THREE.PlaneBufferGeometry(), new THREE.MeshBasicMaterial({ map: this.renderTarget.texture })))
-    // renderer.render(scene, new THREE.Camera())
   }
   compactAllocation() {
     this.renderTarget.setSize(1, 1)
