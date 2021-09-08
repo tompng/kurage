@@ -12,8 +12,9 @@ import { World } from './world'
 import { BezierStringRenderer } from './string_mesh'
 import { Menu } from './menu'
 import { GearValue, GearComponent } from './gear_component'
-import { BookComponent } from './book_component'
+import { BookComponent, aquariumSetups } from './book_component'
 import { addClover, addHanagasa, addGaming, addLongString, addMiddleString, addShortString, addRibbonString } from './gear'
+import { AquariumJelly } from './aquarium'
 
 const renderOnResize: (() => void)[] = []
 const textureUrls = [textureUrl0, textureUrl1, textureUrl2, textureUrl3, textureUrl4, textureUrl5]
@@ -66,6 +67,21 @@ menu.onClose = () => {
 const stringRenderer = new BezierStringRenderer()
 const texture = textures[3]
 const jelly = new Jelly(6, texture)
+
+aquariumSetups.push([
+  6, (aq, r) => {
+    for (let i = 0; i < 3; i++) {
+      const jelly = new Jelly(6, textures[1])
+      const j = new AquariumJelly(r, jelly)
+      addClover(jelly, aq.stringRenderer)
+      addShortString(jelly, aq.stringRenderer)
+      addRibbonString(jelly)
+      aq.objects.push(j)
+      assignGlobal({ aqj: j })
+    }
+  }
+])
+
 
 jelly.setPosition({ x: 0, y: 0, z: -2 }, { x: -1, y: 0, z: 0.1 })
 const world = new World(stringRenderer, jelly)

@@ -1,7 +1,8 @@
 import * as THREE from 'three'
 import { BezierStringRenderer } from './string_mesh'
-import { Point3D, Point2D, randomDirection } from './math'
+import { Point3D, Point2D, randomDirection, normalize, cross as vectorCross, dot as vectorDot, scale as vectorScale, sub as vectorSub } from './math'
 import { Fish, Shrimp } from './fish_shrimp'
+import { Jelly } from './jelly'
 
 type AquaObject = {
   update(dt: number): void
@@ -45,6 +46,65 @@ export class Shrimps extends FishShrimpsBase {
     }
   }
   dispose() {}
+}
+
+export class AquariumJelly {
+  time = 10000 * Math.random()
+  waves: [number, Point3D, Point3D][] = []
+  constructor(public radius: number, public jelly: Jelly) {
+    for (let i = 0; i < 8; i++) {
+      const axis1 = randomDirection()
+      const axis2 = normalize(vectorCross(axis1, randomDirection()))
+      this.waves.push([0.1 + 0.1 * Math.random(), axis1, axis2])
+    }
+    const [position, velocity] = this.calcPV()
+    jelly.phase = Math.random()
+    jelly.phaseSpeed *= (0.8 + 0.4 * Math.random())
+    jelly.setPosition(position, normalize(velocity))
+  }
+  calcPV(): [Point3D, Point3D] {
+    const { time } = this
+    let pos = { x: 0, y: 0, z: 0 }
+    let vel = { x: 0, y: 0, z: 0 }
+    const scale = this.radius / 8
+    for (const [freq, axis1, axis2] of this.waves) {
+      const sin = Math.sin(freq * time)
+      const cos = Math.cos(freq * time)
+      const p = scale * Math.sin(freq * time)
+      const v = scale * freq * Math.cos(freq * time)
+      pos.x += (axis1.x * cos + axis2.x * sin) * scale
+      pos.y += (axis1.y * cos + axis2.y * sin) * scale
+      pos.z += (axis1.z * cos + axis2.z * sin) * scale
+      vel.x += (-axis1.x * sin + axis2.x * cos) * scale * freq
+      vel.y += (-axis1.y * sin + axis2.y * cos) * scale * freq
+      vel.z += (-axis1.z * sin + axis2.z * cos) * scale * freq
+    }
+    return [pos, vel]
+  }
+  update(dt: number) {
+    dt /= 2
+    const { jelly } = this
+    this.time += dt
+    const [position, velocity] = this.calcPV()
+    const direction = normalize(velocity)
+    const currentDir = normalize(vectorSub(jelly.transformLocalPoint({ x: 0, y: 0, z: -1 }), jelly.position))
+    jelly.velocity.x = position.x - jelly.position.x
+    jelly.velocity.y = position.y - jelly.position.y
+    jelly.velocity.z = position.z - jelly.position.z
+    const theta = Math.atan(Math.acos(vectorDot(currentDir, direction))) * 0.5
+    const mscale = 1 - 10 * dt
+    const rot = normalize(vectorCross(currentDir, direction))
+    jelly.momentum.x = jelly.momentum.x * mscale + rot.x * theta * dt * 100
+    jelly.momentum.y = jelly.momentum.y * mscale + rot.y * theta * dt * 100
+    jelly.momentum.z = jelly.momentum.z * mscale + rot.z * theta * dt * 100
+    jelly.update(dt)
+  }
+  render(renderer: THREE.WebGLRenderer, camera: THREE.Camera) {
+    this.jelly.render(renderer, camera)
+  }
+  dispose() {
+    this.jelly.dispose()
+  }
 }
 
 function createHalfSphereGeometry(n = 16) {

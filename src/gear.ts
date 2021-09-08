@@ -185,7 +185,7 @@ export function addLongString(jelly: Jelly, stringRenderer: BezierStringRenderer
 }
 
 export function addShortString(jelly: Jelly, stringRenderer: BezierStringRenderer) {
-  const thinStringProfile = stringRenderer.getPlainProfile({ l: 4, r: 5 }, 0.008, new THREE.Color(0xBFBFFF))
+  const thinStringProfile = stringRenderer.getPlainProfile({ l: 4, r: 5 }, 0.01, new THREE.Color(0xBFBFFF))
   function requestThinString(string: String3D) {
     thinStringProfile.request(string.bezierSegments())
   }

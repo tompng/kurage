@@ -8,7 +8,7 @@ type SingleRendererManager = {
   release(): void
 }
 
-const aquariumSetups: [number, ((aquarium: Aquarium, radius: number) => void)][] = [
+export const aquariumSetups: [number, ((aquarium: Aquarium, radius: number) => void)][] = [
   [3, (aq, r) => aq.objects.push(new Fishes(r))],
   [3, (aq, r) => aq.objects.push(new Shrimps(r))]
 ]
