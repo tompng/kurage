@@ -320,9 +320,9 @@ export class Shrimp {
     this.th = this.th * s + (1 - s) * this.thDst
     this.thz = this.thz * s + (1 - s) * this.thzDst
   }
-  updateForRender() {
+  updateForRender(yscale = 1 / 4) {
     const { mesh, position, th } = this
-    mesh.position.set(position.x, position.y / 4, position.z)
+    mesh.position.set(position.x, position.y * yscale, position.z)
     mesh.setRotationFromEuler(new THREE.Euler(
       0,
       Math.atan(this.thz),
@@ -392,9 +392,9 @@ export class Fish {
       position.z = z
     }
   }
-  updateForRender() {
+  updateForRender(yscale = 1 / 4) {
     const { mesh, position, smoothDir } = this
-    mesh.position.set(position.x, position.y / 4, position.z)
+    mesh.position.set(position.x, position.y * yscale, position.z)
     mesh.setRotationFromEuler(new THREE.Euler(
       0,
       Math.atan(this.dz),

@@ -11,14 +11,14 @@ type AquaObject = {
 
 class FishShrimpsBase {
   scene = new THREE.Scene()
-  objects: { update3D(dt: number, radius: number): void; updateForRender(): void }[] = []
+  objects: { update3D(dt: number, radius: number): void; updateForRender(yscale: number): void }[] = []
   constructor(public radius: number) {
   }
   update(dt: number) {
     for (const obj of this.objects) obj.update3D(dt, this.radius)
   }
   render(renderer: THREE.WebGLRenderer, camera: THREE.Camera) {
-    for (const obj of this.objects) obj.updateForRender()
+    for (const obj of this.objects) obj.updateForRender(1)
     renderer.render(this.scene, camera)
   }
 }
@@ -27,7 +27,7 @@ export class Fishes extends FishShrimpsBase {
   constructor(radius: number) {
     super(radius)
     for (let i = 0; i < 32; i++) {
-      const fish = new Fish(randomDirection(radius * 0.8))
+      const fish = new Fish(randomDirection(radius * 2 / 3))
       this.objects.push(fish)
       this.scene.add(fish.mesh)
     }
@@ -39,7 +39,7 @@ export class Shrimps extends FishShrimpsBase {
   constructor(radius: number) {
     super(radius)
     for (let i = 0; i < 32; i++) {
-      const fish = new Shrimp(randomDirection(radius * 0.8))
+      const fish = new Shrimp(randomDirection(radius * 2 / 3))
       this.objects.push(fish)
       this.scene.add(fish.mesh)
     }
@@ -55,7 +55,7 @@ function createHalfSphereGeometry(n = 16) {
   function addTriangle(a: Coord, b: Coord, c: Coord) {
     for (const [p, uv] of [a, b, c]) {
       positions.push(p.x, p.y, p.z)
-      uvs.push((1 + uv.x) / 2, (1+ uv.y) / 2)
+      uvs.push((1 + uv.x) / 2, (1 + uv.y) / 2)
     }
   }
   for (let i = 1; i <= n; i++) {
@@ -66,7 +66,8 @@ function createHalfSphereGeometry(n = 16) {
     const r = Math.sin(zth)
     const current: Coord[] = []
     const m = Math.round(4 * r * n / (1 + a * (1 - 2 * t)))
-    const uvr = (r + 2 * Math.asin(r) / Math.PI) / 2
+    const wr = 2 * Math.asin(r) / Math.PI
+    const uvr = (r + 2 * wr) / 3
     for (let i = 0; i < m; i++) {
       const th = 2 * Math.PI * i / m
       const cos = Math.cos(th)
@@ -118,18 +119,48 @@ export class Aquarium {
     magFilter: THREE.LinearFilter,
     type: THREE.HalfFloatType
   })
-  offscreenCamera = new THREE.PerspectiveCamera(90, 1, 0.1, 32)
   scene = new THREE.Scene()
-  camera = new THREE.Camera()
+  sphere: THREE.Mesh
   stringRenderer = new BezierStringRenderer()
-  constructor(public radius: number) {
+  direction = {
+    thetaXY: 0,
+    thetaZ: 0
+  }
+  radius = 1
+  constructor(public dom: HTMLDivElement) {
     const material = new THREE.ShaderMaterial({
       uniforms: { map: { value: this.renderTarget.texture }},
       vertexShader: sphereVertexShader,
       fragmentShader: sphereFragmentShader
     })
-    const sphere = new THREE.Mesh(createHalfSphereGeometry(), material)
-    this.scene.add(sphere)
+    this.sphere = new THREE.Mesh(createHalfSphereGeometry(), material)
+    const plane = new THREE.Mesh(
+      new THREE.PlaneBufferGeometry(),
+      new THREE.MeshBasicMaterial({ color: 'red '})
+    )
+    plane.position.z = -1
+    this.scene.add(plane)
+    this.scene.add(this.sphere)
+    let pointer: { id: number; x: number; y: number } | null = null
+    dom.onpointerdown = e => {
+      e.preventDefault()
+      pointer = { id: e.pointerId, x: e.pageX, y: e.pageY }
+    }
+    dom.onpointermove = e => {
+      e.preventDefault()
+      if (pointer?.id !== e.pointerId) return
+      const dx = e.pageX - pointer.x
+      const dy = e.pageY - pointer.y
+      const s = 3 / Math.min(dom.offsetWidth, dom.offsetHeight)
+      this.direction.thetaXY -= s * dx
+      this.direction.thetaZ = Math.max(-Math.PI / 6, Math.min(this.direction.thetaZ + s * dy, Math.PI / 3))
+      pointer.x = e.pageX
+      pointer.y = e.pageY
+    }
+    dom.onpointerup = e => {
+      e.preventDefault()
+      pointer = null
+    }
   }
   objects: AquaObject[] = []
   update(dt: number) {
@@ -140,10 +171,17 @@ export class Aquarium {
     this.objects = []
   }
   renderToOffScreen(renderer: THREE.WebGLRenderer, size: number) {
-    const { offscreenCamera } = this
+    const { direction, radius } = this
+    const fov = 40
+    const distanceParam = 0.98
+    const distance = distanceParam * radius / Math.sin(fov * Math.PI / 180 / 2)
+    const offscreenCamera = new THREE.PerspectiveCamera(fov, 1, (distance - radius) / 4, (distance + radius) * 4)
+    offscreenCamera.position.set(
+      distance * Math.cos(direction.thetaXY) * Math.cos(direction.thetaZ),
+      distance * Math.sin(direction.thetaXY) * Math.cos(direction.thetaZ),
+      distance * Math.sin(direction.thetaZ)
+    )
     offscreenCamera.up.set(0, 0, 1)
-    const cameraPosRatio = 0.8
-    offscreenCamera.position.set(0, -Math.SQRT2 * this.radius * cameraPosRatio, 0)
     offscreenCamera.lookAt(0, 0, 0)
     const offscreenSize = Math.ceil(size * 1.5)
     this.renderTarget.setSize(offscreenSize, offscreenSize)
@@ -164,10 +202,22 @@ export class Aquarium {
     if (width < height) {
       fov = 2 * Math.atan(Math.tan(Math.PI * fov / 180 / 2) / aspect) * 180 / Math.PI
     }
-    this.camera = new THREE.PerspectiveCamera(fov, aspect, 1 / 8, 8)
-    this.camera.position.set(0, 0, 2.5)
-    this.camera.lookAt(0, 0, 0)
-    renderer.render(this.scene, this.camera)
+    const { direction, sphere } = this
+    const distance = 2.5
+    const camera = new THREE.PerspectiveCamera(fov, aspect, 1 / 8, 8)
+    camera.position.set(
+      distance * Math.cos(direction.thetaXY) * Math.cos(direction.thetaZ),
+      distance * Math.sin(direction.thetaXY) * Math.cos(direction.thetaZ),
+      distance * Math.sin(direction.thetaZ)
+    )
+    sphere.rotation.set(Math.PI / 2 - direction.thetaZ, 0, Math.PI / 2 + direction.thetaXY, 'ZYX')
+    camera.up.set(0, 0, 1)
+    camera.lookAt(0, 0, 0)
+    renderer.render(this.scene, camera)
+
+    // const scene = new THREE.Scene()
+    // scene.add(new THREE.Mesh(new THREE.PlaneBufferGeometry(), new THREE.MeshBasicMaterial({ map: this.renderTarget.texture })))
+    // renderer.render(scene, new THREE.Camera())
   }
   compactAllocation() {
     this.renderTarget.setSize(1, 1)

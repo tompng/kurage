@@ -16,7 +16,7 @@ export class BookComponent {
   dom: HTMLDivElement
   mode: number | null = null
   canvas: HTMLCanvasElement
-  aquarium = new Aquarium(1)
+  aquarium: Aquarium
   target = {
     index: null as number | null,
     phase: 0,
@@ -34,6 +34,9 @@ export class BookComponent {
         else this.openTarget(index)
       }
     })
+    const aquariumDOM = document.createElement('div')
+    aquariumDOM.className = 'aquarium'
+    this.aquarium = new Aquarium(aquariumDOM)
   }
   openTarget(index: number) {
     const { target } = this
@@ -51,8 +54,9 @@ export class BookComponent {
     target.fadeCanvas.className = 'fade'
     this.dom.appendChild(target.fadeCanvas)
     const rendererDOM = this.rendererManager.use()
-    this.dom.appendChild(rendererDOM)
-    rendererDOM.style.opacity = '0'
+    this.dom.appendChild(this.aquarium.dom)
+    this.aquarium.dom.appendChild(rendererDOM)
+    this.aquarium.dom.style.opacity = '0'
   }
   closeTarget() {
     this.target.dir = -1
@@ -144,7 +148,7 @@ export class BookComponent {
     if (target.phase === 0) return
     this.renderFadeCanvas()
     const renderer = this.rendererManager.renderer
-    renderer.domElement.style.opacity = String(target.phase)
+    this.aquarium.dom.style.opacity = String(target.phase)
     const width = dom.offsetWidth
     const height = dom.offsetHeight
     const ratio = window.devicePixelRatio
@@ -194,6 +198,7 @@ export class BookComponent {
     this.aquarium.clearObjects()
     this.aquarium.compactAllocation()
     this.rendererManager.release()
+    this.aquarium.dom.remove()
     this.target.index = null
     this.target.phase = 0
     this.target.dir = -1
