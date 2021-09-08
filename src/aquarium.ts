@@ -99,18 +99,53 @@ function createHalfSphereGeometry(n = 16) {
 
 const sphereVertexShader = `
 varying vec2 vTexcoord;
+varying float alpha, density;
+#define FLOORZ -1.05
 void main() {
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1);
   vTexcoord = uv;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1);
+  vec3 gpos = (modelMatrix * vec4(position, 1)).xyz;
+  vec3 view = normalize(gpos - cameraPosition);
+  vec3 norm = normalize(gpos);
+  float vndot = dot(view, norm);
+  density = 0.8 - 0.4 * vndot;
+  alpha = min(-16.0 * vndot, (0.8 - 0.2 * vndot));
+  vec3 refl = view - 2.0 * vndot * norm;
+  vec3 refr = normalize(view - 0.1 * norm);
+  vec2 floorRefr = gpos.xy + refr.xy * (FLOORZ-gpos.z) / refr.z;
+  color = vec3(0.15, 0.15, 0.2) / (1.0 + 4.0 * dot(floorRefr, floorRefr));
+  // color = max(dot(ref, vec3(0.2, 0.3, 1)), 0.0) * vec3(0.2, 0.2, 0.2);
+  // color = vec3(0, 0, 0);
+  // color.r = max(ref.z, 0.0);
 }
 `
 
 const sphereFragmentShader = `
 uniform sampler2D map;
 varying vec2 vTexcoord;
+varying float alpha, density;
+varying vec3 color;
 void main() {
-  gl_FragColor = texture2D(map, vTexcoord) + vec4(0.2, 0.2, 0.2, 1);
+  gl_FragColor = vec4(texture2D(map, vTexcoord).rgb + color + density * vec3(0.2, 0.2, 0.4), alpha);
 }
+`
+
+const floorVertexShader = `
+varying vec2 vxy;
+void main() {
+  vec4 gpos = modelMatrix * vec4(position, 1);
+  vxy = gpos.xy;
+  gl_Position = projectionMatrix * viewMatrix * gpos;
+}
+`
+
+const floorFragmentShader = `
+varying vec2 vxy;
+void main() {
+  float brightness = 1.0 / (1.0 + 2.0 * dot(vxy, vxy)) - 0.01;
+  gl_FragColor = vec4(vec3(0.3, 0.3, 0.4) * brightness, 1);
+}
+
 `
 
 export class Aquarium {
@@ -131,15 +166,21 @@ export class Aquarium {
     const material = new THREE.ShaderMaterial({
       uniforms: { map: { value: this.renderTarget.texture }},
       vertexShader: sphereVertexShader,
-      fragmentShader: sphereFragmentShader
+      fragmentShader: sphereFragmentShader,
+      transparent: true,
+      blending: THREE.NormalBlending
     })
     this.sphere = new THREE.Mesh(createHalfSphereGeometry(), material)
-    const plane = new THREE.Mesh(
+    const floor = new THREE.Mesh(
       new THREE.PlaneBufferGeometry(),
-      new THREE.MeshBasicMaterial({ color: 'red '})
+      new THREE.ShaderMaterial({
+        vertexShader: floorVertexShader,
+        fragmentShader: floorFragmentShader
+      })
     )
-    plane.position.z = -1
-    this.scene.add(plane)
+    floor.scale.set(8, 8, 1)
+    floor.position.z = -1.05
+    this.scene.add(floor)
     this.scene.add(this.sphere)
     let pointer: { id: number; x: number; y: number } | null = null
     dom.onpointerdown = e => {
@@ -153,7 +194,7 @@ export class Aquarium {
       const dy = e.pageY - pointer.y
       const s = 3 / Math.min(dom.offsetWidth, dom.offsetHeight)
       this.direction.thetaXY -= s * dx
-      this.direction.thetaZ = Math.max(-Math.PI / 6, Math.min(this.direction.thetaZ + s * dy, Math.PI / 3))
+      this.direction.thetaZ = Math.max(-Math.PI / 8, Math.min(this.direction.thetaZ + s * dy, Math.PI / 3))
       pointer.x = e.pageX
       pointer.y = e.pageY
     }
