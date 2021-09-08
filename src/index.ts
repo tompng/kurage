@@ -85,10 +85,13 @@ renderer.domElement.style.width = uiCanvas.style.width = '100%'
 renderer.domElement.style.height = uiCanvas.style.height = '100%'
 mainDiv.appendChild(renderer.domElement)
 const rendererManager = {
+  inUse: false,
   use() {
+    this.inUse = true
     return renderer.domElement
   },
   release() {
+    this.inUse = false
     renderer.domElement.style.cssText = 'width: 100%; height: 100%;'
     renderer.domElement.className = ''
     mainDiv.insertBefore(renderer.domElement, uiCanvas)
@@ -96,6 +99,10 @@ const rendererManager = {
   },
   renderer
 }
+
+renderOnResize.push(() => {
+  if (!rendererManager.inUse) render()
+})
 
 menu.components.gear = new GearComponent(gearValue, values => {
   updateJellyByGearValue(values)
@@ -105,8 +112,6 @@ menu.components.book = new BookComponent(rendererManager)
 const mapComponentDOM = document.querySelector<HTMLDivElement>('#map')!
 mapComponentDOM.remove()
 menu.components.map = { dom: mapComponentDOM }
-
-
 
 mainDiv.appendChild(uiCanvas)
 const fullSquareStyle = document.createElement('style')
@@ -138,7 +143,6 @@ function setSize(){
   mainDiv.style.top = `${(innerHeight - height) / 2}px`
   for (const f of renderOnResize) f()
 }
-setSize()
 window.onresize = setSize
 const touch = {
   id: null as null | number,
@@ -341,4 +345,4 @@ function renderUI() {
   uiCtx.restore()
 }
 
-renderOnResize.push(render)
+setSize()
