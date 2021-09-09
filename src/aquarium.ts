@@ -1,17 +1,14 @@
 import * as THREE from 'three'
 import { BezierStringRenderer } from './string_mesh'
-import { Point3D, Point2D, randomDirection, normalize, cross as vectorCross, dot as vectorDot, scale as vectorScale, sub as vectorSub } from './math'
+import { Point3D, Point2D, randomSpherePosition, randomDirection, normalize, cross as vectorCross, dot as vectorDot, scale as vectorScale, sub as vectorSub } from './math'
 import { Fish, Shrimp } from './fish_shrimp'
 import { Jelly } from './jelly'
+import { createAquariumDustScene } from './aquarium_dust'
 
 type AquaObject = {
   update(dt: number): void
   render(renderer: THREE.WebGLRenderer, camera: THREE.Camera): void
   dispose(): void
-}
-
-function randomSpherePos(radius: number) {
-  return randomDirection(radius * Math.pow(Math.random(), 1 / 3))
 }
 class FishShrimpsBase {
   scene = new THREE.Scene()
@@ -31,7 +28,7 @@ export class Fishes extends FishShrimpsBase {
   constructor(radius: number) {
     super(radius)
     for (let i = 0; i < 32; i++) {
-      const fish = new Fish(randomSpherePos(radius * 0.9))
+      const fish = new Fish(randomSpherePosition(radius * 0.9))
       this.objects.push(fish)
       this.scene.add(fish.mesh)
     }
@@ -43,7 +40,7 @@ export class Shrimps extends FishShrimpsBase {
   constructor(radius: number) {
     super(radius)
     for (let i = 0; i < 32; i++) {
-      const fish = new Shrimp(randomSpherePos(radius * 0.9))
+      const fish = new Shrimp(randomSpherePosition(radius * 0.9))
       this.objects.push(fish)
       this.scene.add(fish.mesh)
     }
@@ -235,6 +232,7 @@ export class Aquarium {
     thetaXY: 0,
     thetaZ: 0
   }
+  dust = createAquariumDustScene(128)
   radius = 1
   constructor(public dom: HTMLDivElement) {
     const floorZ = -1.05
@@ -310,6 +308,8 @@ export class Aquarium {
     renderer.clearDepth()
     this.objects.forEach(obj => obj.render(renderer, offscreenCamera))
     this.stringRenderer.render(renderer, offscreenCamera)
+    this.dust.set(this.radius, offscreenSize)
+    renderer.render(this.dust.scene, offscreenCamera)
     renderer.setRenderTarget(null)
   }
   renderToScreen(renderer: THREE.WebGLRenderer) {

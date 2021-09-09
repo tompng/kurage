@@ -145,6 +145,11 @@ export function randomDirection(r = 1): Point3D {
   }
 }
 
+
+export function randomSpherePosition(radius: number) {
+  return randomDirection(radius * Math.pow(Math.random(), 1 / 3))
+}
+
 export class SmoothPoint3D {
   v1: Point3D = { x: 0, y: 0, z: 0 }
   v2: Point3D = { x: 0, y: 0, z: 0 }
