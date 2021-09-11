@@ -166,6 +166,7 @@ const rendererManager = {
     return renderer.domElement
   },
   release() {
+    if (!this.inUse) return
     this.inUse = false
     renderer.domElement.style.cssText = 'width: 100%; height: 100%;'
     renderer.domElement.className = ''
