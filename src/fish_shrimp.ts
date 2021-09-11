@@ -409,7 +409,8 @@ uniform float phase;
 uniform vec3 destination;
 void main() {
   gl_PointSize = 16.0;
-  vec3 gpos = (modelMatrix * vec4(phase * position, 1)).xyz + phase * phase * phase * destination;
+  float phase2 = max(phase * 2.0 - 1.0, 0.0);
+  vec3 gpos = (modelMatrix * vec4(phase * position, 1)).xyz + phase2 * phase2 * phase2 * destination;
   gl_Position = projectionMatrix * viewMatrix * vec4(gpos, 1);
 }
 
@@ -524,7 +525,7 @@ export class FishShrimpCloud {
       }
     }
     for (const e of this.effects) {
-      e.phase += 4 * dt
+      e.phase += 3 * dt
       e.particle.uniforms.phase.value = e.phase
     }
     while (this.effects.length && this.effects[0].phase > 1) {
