@@ -152,6 +152,9 @@ export class World {
     renderer.render(this.fsCloud.scene, camera)
     renderer.setRenderTarget(null)
   }
+  initializeByCenterPoint(center: Point3D) {
+    this.fsCloud.initialSpawn(center, 2)
+  }
   renderToScreen(renderer: THREE.WebGLRenderer) {
     renderer.setRenderTarget(null)
     renderer.render(this.targetRenderScene, this.targetRenderCamera)

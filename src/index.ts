@@ -145,6 +145,7 @@ aquariumSetups.push(
 jelly.setPosition({ x: 0, y: 0, z: -2 }, { x: -1, y: 0, z: 0.1 })
 const world = new World(stringRenderer, jelly)
 const player = world.player
+world.initializeByCenterPoint(jelly.position)
 
 updateJellyByGearValue(gearValue)
 

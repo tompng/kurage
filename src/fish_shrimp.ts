@@ -480,6 +480,18 @@ export class FishShrimpCloud {
     this.effects.push({ phase: 0, particle })
     this.scene.add(particle.mesh)
   }
+  initialSpawn(center: Point3D, radius: number) {
+    this.scene.clear()
+    this.mobs.clear()
+    const { despawnRadius } = this
+    for (let i = 0; i < 20; i++) {
+      const x = center.x - despawnRadius + 2 * despawnRadius * Math.random()
+      const z = center.z - despawnRadius + 2 * despawnRadius * Math.random()
+      if ((x - center.x) ** 2 + (z - center.z) ** 2 > despawnRadius ** 2) continue
+      this.spawnMultiple(x, z, center, radius)
+      if (this.mobs.size > this.maxCount) break
+    }
+  }
   update(center: Point3D, dst: Point3D, dt: number, hitMap: HitMap, tap: { x: number; z: number } | null) {
     const { mobs, scene, updateRadius, despawnRadius } = this
     const destroys: (Fish | Shrimp)[] = []
@@ -503,26 +515,12 @@ export class FishShrimpCloud {
       mobs.delete(mob)
     })
     this.timer += dt
-    if (this.timer > 2 && this.mobs.size < this.maxCount) {
+    if (this.timer > 0.25 && this.mobs.size < this.maxCount) {
       const x = center.x - despawnRadius + 2 * despawnRadius * Math.random()
       const z = center.z - despawnRadius + 2 * despawnRadius * Math.random()
       const r2 = (x - center.x) ** 2 + (z - center.z) ** 2
-      if (updateRadius ** 2 < r2 && r2 < despawnRadius ** 2) {
-        const mode = Math.random() < 0.5
-        const n = 2 + Math.random() * 10
-        for (let i = 0; i < n; i++) {
-          const rnd = randomDirection()
-          const p = { x: x + rnd.x, y: rnd.y / 4, z: z + rnd.z }
-          const r2 = (p.x - center.x) ** 2 + (p.z - center.z) ** 2
-          if (updateRadius ** 2 < r2) {
-            if (mode) {
-              this.spawnFish(p)
-            } else {
-              this.spawnShrimp(p)
-            }
-          }
-        }
-      }
+      if (updateRadius ** 2 < r2 && r2 < despawnRadius ** 2) this.spawnMultiple(x, z, center, updateRadius)
+      this.timer = 0
     }
     for (const e of this.effects) {
       e.phase += 3 * dt
@@ -531,6 +529,22 @@ export class FishShrimpCloud {
     while (this.effects.length && this.effects[0].phase > 1) {
       const e = this.effects.shift()!
       this.scene.remove(e.particle.mesh)
+    }
+  }
+  spawnMultiple(x: number, z: number, center: Point3D, minRadius: number) {
+    const mode = Math.random() < 0.5
+    const n = 2 + Math.random() * 10
+    for (let i = 0; i < n; i++) {
+      const rnd = randomDirection()
+      const p = { x: x + rnd.x, y: rnd.y / 4, z: z + rnd.z }
+      const r2 = (p.x - center.x) ** 2 + (p.z - center.z) ** 2
+      if (minRadius ** 2 < r2) {
+        if (mode) {
+          this.spawnFish(p)
+        } else {
+          this.spawnShrimp(p)
+        }
+      }
     }
   }
   spawnFish(position: Point3D) {
