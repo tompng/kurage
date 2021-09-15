@@ -13,6 +13,7 @@ import { BezierStringRenderer } from './string_mesh'
 import { Menu } from './menu'
 import { GearValue, GearComponent } from './gear_component'
 import { BookComponent, aquariumSetups } from './book_component'
+import { MapComponent } from './map_component'
 import { addClover, addHanagasa, addGaming, addLongString, addMiddleString, addShortString, addRibbonString } from './gear'
 import { AquariumJelly } from './aquarium'
 
@@ -186,9 +187,7 @@ menu.components.gear = new GearComponent(gearValue, values => {
   render()
 })
 menu.components.book = new BookComponent(rendererManager)
-const mapComponentDOM = document.querySelector<HTMLDivElement>('#map')!
-mapComponentDOM.remove()
-menu.components.map = { dom: mapComponentDOM }
+menu.components.map = new MapComponent()
 
 mainDiv.appendChild(uiCanvas)
 const fullSquareStyle = document.createElement('style')
