@@ -75,7 +75,6 @@ function drawJelly(ctx: CanvasRenderingContext2D) {
     ctx.arc(0, 0, 8 + 32 * phase, 0, 2 * Math.PI)
     ctx.stroke()
   }
-  ctx.globalAlpha = 0.8
   ctx.translate(3, 0)
   const x1 = 1
   const y1 = 8
@@ -84,15 +83,25 @@ function drawJelly(ctx: CanvasRenderingContext2D) {
   const curve: [number, number][] = [[4, 0], [x1, y1], [x2, y2], [x2 + 1, 0], [x2, -y2], [x1, -y1]]
   ctx.beginPath()
   curvePath(ctx, curve, true)
+  ctx.globalAlpha = 0.4
+  ctx.fillStyle = 'white'
+  ctx.fill()
+  ctx.globalAlpha = 0.8
   ctx.stroke()
   ctx.beginPath()
   const rnd = (seed: number) => (Math.sin(1000 * seed + 1) + 1) * 1000 % 1
   for (let i = 0; i < 4; i++) {
     const z = 2 * i / 3 - 1
-    curvePath(ctx, [0, 0.2, 0.4, 0.6, 0.8, 1].map(t => [
-      -4 - 16 * t,
-      4 * z + 2 * t * z + (Math.cos(time * t * (4 + rnd(t + z)) + t - z) + Math.sin(time * t * (4 + rnd(t + z + 10)) + t + z)) / 2
-    ]))
+    curvePath(ctx, [0, 0.2, 0.4, 0.6, 0.8, 1].map(t => {
+      const a = 1 + rnd(t + z + 10)
+      const b = 1 + rnd(t + z + 20)
+      const c = 1 + rnd(t + z + 30)
+      const d = 1 + rnd(t + z + 40)
+      return [
+        -5 - 16 * t,
+        4 * z + 2 * t * z + t * (Math.cos(time * a + t * b + z) + Math.sin(time * c + t * d - z)) / 2
+      ]
+    }))
   }
   ctx.stroke()
 }
@@ -256,9 +265,8 @@ function generateFullMap() {
 function renderMark(ctx: CanvasRenderingContext2D, x: number, y: number, r: number) {
   const a = 0.1
   const b = 0.9
-  ctx.fillStyle = ctx.strokeStyle = '#543'
-  ctx.globalAlpha = 0.8
-  ctx.lineWidth = (1 - b) / 6
+  ctx.fillStyle = ctx.strokeStyle = '#403028'
+  ctx.lineWidth = (1 - b) / 4
   ctx.save()
   ctx.translate(x, y)
   ctx.scale(r, r)
@@ -289,7 +297,7 @@ function renderMark(ctx: CanvasRenderingContext2D, x: number, y: number, r: numb
   }
   ctx.stroke()
   ctx.beginPath()
-  ctx.lineWidth = (1 - b) / 8
+  ctx.lineWidth = (1 - b) / 6
   for (let i = 0; i < 64; i++) {
     const c = 0.6
     curvePath(ctx, [...new Array(5)].map((_, i) => [
