@@ -23,17 +23,19 @@ export class MapComponent {
   mode: number | null = null
   canvas: HTMLCanvasElement
   map = generateFullMap()
-  target = {
-    index: null as number | null,
-    phase: 0,
-    dir: -1 as -1 | 1,
-    fadeCanvas: null as HTMLCanvasElement | null
-  }
+  target : {
+    point: Point2D
+    startTime: number
+  } | null = null
   constructor(public getCurrentJellyPos: PositionFunc) {
     this.dom = document.querySelector<HTMLDivElement>('#map')!
     this.canvas = this.dom.querySelector<HTMLCanvasElement>('canvas')!
-    this.canvas.onclick = e => {
-      console.log(transformToMapPoint({ x: e.offsetX/this.canvas.offsetWidth*1024, y: e.offsetY/this.canvas.offsetWidth*1024 }))
+    this.canvas.onpointerdown = e => {
+      if (this.target) return
+      const p = transformToMapPoint({ x: e.offsetX / this.canvas.offsetWidth * 1024, y: e.offsetY / this.canvas.offsetWidth * 1024 })
+      const wp = warpPoints.find(wp => (wp.x - p.x) ** 2 + (wp.y - p.y) ** 2 < 64 ** 2)
+      if (!wp) return
+      this.target = { point: wp, startTime: performance.now() }
     }
     this.dom.remove()
   }
@@ -47,18 +49,47 @@ export class MapComponent {
     ctx.save()
     ctx.scale(size / 1024, size / 1024)
     ctx.drawImage(this.map, 0, 0, 1024, 1024)
-
     const pos = this.getCurrentJellyPos()
     mapTransform(ctx)
+    ctx.save()
     ctx.translate(pos.x, pos.y)
     ctx.rotate(pos.th)
     ctx.scale(4, 4)
     drawJelly(ctx)
-
+    ctx.restore()
+    const time = performance.now()
+    for (const p of warpPoints) {
+      if (p === this.target?.point) {
+        const phase = Math.max(0, Math.min(1, (time - this.target.startTime) / 500))
+        renderWarpMarker(ctx, p, time / 1000, phase)
+      } else {
+        renderWarpMarker(ctx, p, time / 1000, 0)
+      }
+    }
+    const zoomdom = this.dom.querySelector<HTMLDivElement>('.mapzoom')!
+    if (this.target) {
+      const { canvas, target } = this
+      const t = (time - target.startTime) / 400
+      zoomdom.style.display = 'block'
+      const w = zoomdom.offsetWidth
+      const h = zoomdom.offsetHeight
+      const rmax = Math.hypot(w, h) / 2
+      const r = rmax * (t < 1 ? Math.sqrt(((t - 1) ** 2 + 0.1) / 1.1) : (t < 2 ? 1 : 1 - 2 * (t - 2) ** 2) * Math.sqrt(0.1 / 1.1))
+      const { x: canvasX, y: canvasY } = transformFromMapPoint(target.point)
+      const cw = canvas.offsetWidth
+      const ch = canvas.offsetHeight
+      const x = canvasX / 1024 * cw + (w - cw) / 2
+      const y = canvasY / 1024 * ch + (h - ch) / 2
+      zoomdom.style.background = `radial-gradient(
+        circle at ${x}px ${y}px, transparent ${Math.max(r - 2, 0)}px, black ${r}px)`
+    } else {
+      zoomdom.style.display = 'none'
+    }
     ctx.restore()
   }
   timer: number | null = null
   start() {
+    this.target = null
     this.render()
     this.animate()
   }
@@ -126,6 +157,12 @@ function transformToMapPoint({ x, y }: Point2D) {
     y: y / trans.scale - trans.y
   }
 }
+function transformFromMapPoint({ x, y }: Point2D) {
+  return {
+    x: (x + trans.x) * trans.scale,
+    y: (y + trans.y) * trans.scale
+  }
+}
 function mapTransform(ctx: CanvasRenderingContext2D) {
   ctx.scale(trans.scale, trans.scale)
   ctx.translate(trans.x, trans.y)
@@ -188,10 +225,10 @@ function generateFullMap() {
   ctx.strokeStyle = '#421'
   for (const { x, y } of warpPoints) {
     ctx.beginPath()
-    ctx.arc(x, y, 6, 0, 2 * Math.PI)
+    ctx.arc(x, y, 12, 0, 2 * Math.PI)
     ctx.stroke()
     ctx.beginPath()
-    ctx.arc(x, y, 10, 0, 2 * Math.PI)
+    ctx.arc(x, y, 16, 0, 2 * Math.PI)
     ctx.stroke()
   }
 
@@ -426,4 +463,29 @@ function createTexture(color: string) {
     ctx.fill()
   }
   return canvas
+}
+
+function renderWarpMarker(ctx: CanvasRenderingContext2D, point: Point2D, time: number, phase: number) {
+  ctx.save()
+  ctx.translate(point.x, point.y)
+  const amp = Math.sin(time) ** 16
+  const size = Math.max(16 + 2 * amp, 16 + 16 * phase * phase * (4 - 3 * phase))
+  ctx.beginPath()
+  ctx.arc(0, 0, size + amp, 0, 2 * Math.PI)
+  ctx.fillStyle = 'black'
+  ctx.globalAlpha = 0.5 * amp * (1 - phase)
+  ctx.fill()
+  ctx.globalAlpha = 0.6 + 0.4 * Math.max(amp, phase)
+  ctx.beginPath()
+  ctx.arc(0, 0, size, 0, 2 * Math.PI)
+  ctx.fillStyle = `rgb(${128 + phase * 127}, ${128},${240 - phase * 160})`
+  ctx.fill()
+  ctx.strokeStyle = 'rgba(255,255,255,0.5)'
+  for (let i = 0; i < 4; i++) {
+    ctx.beginPath()
+    curvePath(ctx, [[size / 4, size / 8], [size / 2, size / 6], [size / 2, -size / 6], [size / 4, -size / 8]])
+    ctx.stroke()
+    ctx.rotate(Math.PI / 2)
+  }
+  ctx.restore()
 }

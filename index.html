@@ -148,6 +148,17 @@ canvas {
   width: 90%;
   height: 90%;
 }
+.mapzoom {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;/*9999*/
+  margin: 0;
+  padding: 0;
+  display: none;
+}
 
 .gear-select-row {
   display: flex;
@@ -263,6 +274,7 @@ canvas {
     <div class='full-square'>
       <canvas></canvas>
     </div>
+    <div class='mapzoom'></div>
   </div>
   <div id='gear'>
     <div class='full-square'>
