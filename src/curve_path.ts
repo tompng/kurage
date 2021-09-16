@@ -56,11 +56,11 @@ function splitXY(points: Points): [number[], number[]] {
   }
 }
 
-export function closedCurvePath(ctx: CanvasRenderingContext2D, points: Points) {
+export function closedCurvePath(ctx: CanvasRenderingContext2D, points: Points, move = true) {
   const [xs, ys] = splitXY(points)
   const xparams = closedBezierParams(xs)
   const yparams = closedBezierParams(ys)
-  ctx.moveTo(xs[0], ys[0])
+  if (move) ctx.moveTo(xs[0], ys[0])
   for (let i = 0; i < points.length; i++) {
     const j = (i + 1) % points.length
     ctx.bezierCurveTo(
@@ -75,11 +75,11 @@ export function closedCurvePath(ctx: CanvasRenderingContext2D, points: Points) {
   ctx.closePath()
 }
 
-export function openCurvePath(ctx: CanvasRenderingContext2D, points: Points) {
+export function openCurvePath(ctx: CanvasRenderingContext2D, points: Points, move = true) {
   const [xs, ys] = splitXY(points)
   const xparams = openBezierParams(xs)
   const yparams = openBezierParams(ys)
-  ctx.moveTo(xs[0], ys[0])
+  if (move) ctx.moveTo(xs[0], ys[0])
   for (let i = 0; i < points.length - 1; i++) {
     const j = i + 1
     ctx.bezierCurveTo(
@@ -93,6 +93,6 @@ export function openCurvePath(ctx: CanvasRenderingContext2D, points: Points) {
   }
 }
 
-export function curvePath(ctx: CanvasRenderingContext2D, points: Points, closed = false) {
-  closed ? closedCurvePath(ctx, points) : openCurvePath(ctx, points)
+export function curvePath(ctx: CanvasRenderingContext2D, points: Points, closed = false, move = true) {
+  closed ? closedCurvePath(ctx, points, move) : openCurvePath(ctx, points, move)
 }

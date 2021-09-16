@@ -22,7 +22,7 @@ export class MapComponent {
   }
   render() {
     const { canvas } = this
-    const size = canvas.offsetWidth
+    const size = canvas.offsetWidth * devicePixelRatio
     if (canvas.width != size || canvas.height != size) canvas.width = canvas.height = size
     const ctx = canvas.getContext('2d')
     if (!ctx) return
@@ -60,22 +60,36 @@ function generateFullMap() {
   const ctx = canvas.getContext('2d')!
   const textures = createTextures('#112', 4)
   const wtextures = createTextures('#336', 4)
-  ctx.fillStyle = '#909098'
-  ctx.fillRect(0, 0, size, size)
-  ctx.save()
   ctx.scale(size / 1024, size / 1024)
-  ctx.scale(0.94, 0.94)
-  ctx.translate(1024 * 0.03, 1024 * 0.06)
+  function transform() {
+    ctx.scale(0.92, 0.92)
+    ctx.translate(1024 * 0.04, 1024 * 0.08)
+  }
+  ctx.beginPath()
+  crackPath(ctx, 512, 512, 512, 0.1)
+  ctx.clip()
+  ctx.beginPath()
+  const outerMargin = 2
+  rectPath(ctx, outerMargin, outerMargin, 1024 - 2 * outerMargin, 1024 - 2 * outerMargin, 1, 64)
+  const margin = 12
+  ctx.fillStyle = '#eca'
+  ctx.fill()
+  ctx.beginPath()
+  ctx.rect(margin, margin, 1024 - 2 * margin, 1024 - 2 * margin)
+  ctx.save()
+  ctx.clip()
+  transform()
   const wline: [number, number][] = []
+  const woffset = 16
   for (let i = 0; i < 100; i++) {
-    const t = -16 + (1024 + 16) * i / 100
-    wline.push([t, 4 * Math.abs(Math.sin(i * 0.7))])
+    const t = -woffset + (1024 + woffset * 2) * i / 100
+    wline.push([t, 8 * Math.abs(Math.sin(i * 0.5)) - 8])
   }
   ctx.save()
   ctx.beginPath()
   curvePath(ctx, wline)
-  ctx.lineTo(1024 + 16, 80)
-  ctx.lineTo(-16, 80)
+  ctx.lineTo(1024 + woffset, 32)
+  ctx.lineTo(-woffset, 32)
   ctx.clip()
   for (const [x, y] of wline) {
     const rndx = 8 * Math.random() - 4
@@ -99,18 +113,18 @@ function generateFullMap() {
     ctx.beginPath()
     curvePath(ctx, points, closed)
     if (line == terrainCoords[0]) {
-      const offset = 30
+      const offset = 64
       ctx.lineTo(1024 + offset, -offset)
       ctx.lineTo(1024 + offset, 1024 + offset)
       ctx.lineTo(-offset, 1024 + offset)
       ctx.lineTo(-offset, -offset)
     }
     ctx.clip()
-    ctx.fillStyle = '#80828a'
+    ctx.fillStyle = '#ca8'
     ctx.fill()
     for (const [x, y] of points) {
-      const rndx = 8 * Math.random() - 4
-      const rndy = 8 * Math.random() - 4
+      const rndx = 12 * Math.random() - 6
+      const rndy = 12 * Math.random() - 6
       ctx.globalAlpha = 0.5 + Math.random() * 0.5
       const texture = textures[Math.floor(textures.length * Math.random())]
       const r = 16 + 8 * Math.random()
@@ -118,7 +132,105 @@ function generateFullMap() {
     }
     ctx.restore()
   }
+  const depths = [...new Array(8)].map((_, i) => 900 * i / 7)
+  const rnd = 1.5
+  for (const depth of depths) {
+    ctx.beginPath()
+    curvePath(ctx, [...new Array(17)].map((_, i) => [-32 + (1024 + 32 * 2) * i / 16, depth + rnd * (2 * Math.random() - 1)]))
+    ctx.stroke()
+  }
+  for (let i = 0; i <= 6; i++) {
+    const x = 1024 * (0.05 + 0.9 * i / 6)
+    ctx.beginPath()
+    curvePath(ctx, [...new Array(17)].map((_, i) => [x + rnd * (2 * Math.random() - 1), -64 + (1024 + 64 * 2) * i / 16]))
+    ctx.stroke()
+  }
+  ctx.restore()
+  ctx.beginPath()
+  const lineOuterMargin = 8
+  rectPath(ctx, lineOuterMargin, lineOuterMargin, 1024 - 2 * lineOuterMargin, 1024 - 2 * lineOuterMargin, 1)
+  const innerMargin = 32
+  rectPath(ctx, 1024 - innerMargin, innerMargin, -(1024 - 2 * innerMargin), 1024 - 2 * innerMargin, 1)
+  ctx.fillStyle = '#e0d8d0'
+  ctx.fill()
+  ctx.stroke()
+  transform()
+  depths.forEach((depth, i) => {
+    ctx.font = '10px serif'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillStyle = 'black'
+    ctx.fillText(String(40 * i), 1024 + 26, depth)
+  })
+
+  ctx.restore()
   return canvas
+}
+function rectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, rnd: number, step = 16) {
+  type Line = [number, number][]
+  const a: Line = []
+  const b: Line = []
+  const c: Line = []
+  const d: Line = []
+  for (let i = 1; i < step; i++) {
+    const t = i / step
+    a.push([x + w * t, y + rnd * (2 * Math.random() - 1)])
+    b.push([x + w + rnd * (2 * Math.random() - 1), y + h * t])
+    c.push([x + w * (1 - t), y + h + rnd * (2 * Math.random() - 1)])
+    d.push([x  + rnd * (2 * Math.random() - 1), y + h * (1 - t)])
+  }
+  a.unshift([x, y])
+  a.push([x + w, y])
+  b.unshift([x + w, y])
+  b.push([x + w, y + h])
+  c.unshift([x + w, y + h])
+  c.push([x, y + h])
+  d.unshift([x, y + h])
+  d.push([x, y])
+  ctx.moveTo(x, y)
+  curvePath(ctx, a, false, false)
+  curvePath(ctx, b, false, false)
+  curvePath(ctx, c, false, false)
+  curvePath(ctx, d, false, false)
+  ctx.closePath()
+}
+function crackPath(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number, ratio: number) {
+  const n = 256
+  const coords: [number, number][] = []
+  for (let i = 0; i <= n; i++) {
+    const th = 2 * Math.PI * (i + Math.random()) / n
+    const cos = Math.cos(th)
+    const sin = Math.sin(th)
+    const max = Math.max(Math.abs(cos), Math.abs(sin))
+    coords.push([cx + cos * r / max, cy + sin * r / max])
+  }
+  ctx.moveTo(...coords[0])
+  for (let i = 0; i < n; i++) {
+    const [ax, ay] = coords[i]
+    const [bx, by] = coords[i + 1]
+    if (Math.random() < 0.05) {
+      let dx = ay - by
+      let dy = bx - ax
+      let dr = Math.abs(dx) + Math.abs(dy)
+      dx /= dr
+      dy /= dr
+      const l = r * ratio * Math.random() * Math.random()
+      const l2 = l * (Math.random() - 0.5) / 2
+      const x = (ax + bx) / 2 + dx * l - dy * l2
+      const y = (ay + by) / 2 + dy * l + dx * l2
+      const rnd = l / 4
+      const a = 8 * Math.random()
+      const b = 2 * Math.PI * Math.random()
+      const lt = (t: number, ox: number, oy: number) => {
+        const d = rnd * ((2 * Math.random() - 1) / 3 + Math.asin(Math.sin(a * t + b)) / a)
+        ctx.lineTo(ox * (1 - t) + t * x + d * dy, oy * (1 - t) + t * y - d * dx)
+      }
+      for (let i = 0; i <= 8; i++) lt(i / 8, ax, ay)
+      for (let i = 8; i >= 0; i--) lt(i / 8, bx, by)
+    }
+    ctx.lineTo(bx, by)
+  }
+  ctx.closePath()
 }
 function createTextures(color: string, n: number) {
   return [...new Array(n)].map(() => createTexture(color))
