@@ -91,6 +91,16 @@ function generateFullMap() {
   ctx.lineTo(1024 + woffset, 1024)
   ctx.lineTo(-woffset, 1024)
   ctx.clip()
+  ctx.globalAlpha = 0.5
+  const wltextures = createTextures('#8bd', 4)
+  for (let i = 0; i < 128; i++) {
+    const texture = wltextures[Math.floor(wltextures.length * Math.random())]
+    const size = 64 + 64 * Math.random()
+    const x = -size + (1024 + size) * i / 128
+    const y = -size / 2 + 160 * Math.random() * Math.random()
+    ctx.drawImage(texture, x, y, size, size)
+  }
+  ctx.globalAlpha = 1
   for (const [x, y] of wline) {
     const rndx = 8 * Math.random() - 4
     const rndy = 8 * Math.random() - 4
@@ -99,6 +109,7 @@ function generateFullMap() {
     const r = 16 + 8 * Math.random()
     ctx.drawImage(texture, x - r + rndx, y - r + rndy, 2 * r, 2 * r)
   }
+
   ctx.restore()
 
   for (const line of terrainCoords) {
@@ -159,11 +170,11 @@ function generateFullMap() {
   ctx.textBaseline = 'middle'
   ctx.fillStyle = 'black'
   function genText(width: number) {
-    const words = ['kurage', 'jelly', 'world', 'ocean', 'sea']
+    const words = ['kurage', 'world', 'ocean', 'sea']
     let wsum = 0
     let texts: string[] = []
     while (true) {
-      const s = [...words[Math.floor(words.length * Math.random())]].map(s => (Math.random() < 0.1 ? ' ' + s : s)).join('')
+      const s = [...words[Math.floor(words.length * Math.random())]].map(s => (Math.random() < 0.25 ? ' ' + s : s)).join('')
       const s2 = (texts.length === 0 ? s.replace(/^ ?(.)/, (_, s) => s.toUpperCase()) : s).replaceAll(/ ./g, s => (
         Math.random() < 0.2 ? '.' + s.toUpperCase() : Math.random() < 0.4 ? ',' + s : s
       ))
