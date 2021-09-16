@@ -1,8 +1,11 @@
 import { curvePath } from "./curve_path" 
 import { terrainCoords } from './terrain'
 
-
-
+type PositionFunc = () => {
+  x: number
+  y: number
+  th: number
+}
 
 export class MapComponent {
   dom: HTMLDivElement
@@ -15,7 +18,7 @@ export class MapComponent {
     dir: -1 as -1 | 1,
     fadeCanvas: null as HTMLCanvasElement | null
   }
-  constructor() {
+  constructor(public getCurrentJellyPos: PositionFunc) {
     this.dom = document.querySelector<HTMLDivElement>('#map')!
     this.canvas = this.dom.querySelector<HTMLCanvasElement>('canvas')!
     this.dom.remove()
@@ -29,30 +32,75 @@ export class MapComponent {
     ctx.clearRect(0, 0, size, size)
     ctx.save()
     ctx.scale(size / 1024, size / 1024)
-    for (const line of terrainCoords) {
-      const first = line[0]
-      const last = line[line.length - 1]
-      ctx.beginPath()
-      if (first[0] === last[0] && first[1] === last[1]) {
-        curvePath(ctx, line.slice(1), true)
-      } else {
-        curvePath(ctx, line)
-      }
-      ctx.lineWidth = 4
-      // ctx.stroke()
-    }
     ctx.drawImage(this.map, 0, 0, 1024, 1024)
+
+    const pos = this.getCurrentJellyPos()
+    mapTransform(ctx)
+    ctx.translate(pos.x, pos.y)
+    ctx.rotate(pos.th)
+    ctx.scale(4, 4)
+    drawJelly(ctx)
+
     ctx.restore()
   }
+  timer: number | null = null
   start() {
     this.render()
+    this.animate()
   }
-  update() {
+  animate() {
+    if (this.timer) return
+    this.timer = requestAnimationFrame(() => {
+      this.timer = null
+      this.render()
+      this.animate()
+    })
   }
   end() {
+    if (!this.timer) return
+    cancelAnimationFrame(this.timer)
+    this.timer = null
   }
 }
 
+function drawJelly(ctx: CanvasRenderingContext2D) {
+  ctx.lineWidth = 1
+  ctx.lineCap = 'round'
+  ctx.strokeStyle = '#432'
+  const time = performance.now() / 1000
+  for (let i = 0; i < 4; i++) {
+    const phase = (i / 4 + time / 4) % 1
+    ctx.beginPath()
+    ctx.globalAlpha = phase * (1 - phase)
+    ctx.arc(0, 0, 8 + 32 * phase, 0, 2 * Math.PI)
+    ctx.stroke()
+  }
+  ctx.globalAlpha = 0.8
+  ctx.translate(3, 0)
+  const x1 = 1
+  const y1 = 8
+  const x2 = -4
+  const y2 = 10
+  const curve: [number, number][] = [[4, 0], [x1, y1], [x2, y2], [x2 + 1, 0], [x2, -y2], [x1, -y1]]
+  ctx.beginPath()
+  curvePath(ctx, curve, true)
+  ctx.stroke()
+  ctx.beginPath()
+  const rnd = (seed: number) => (Math.sin(1000 * seed + 1) + 1) * 1000 % 1
+  for (let i = 0; i < 4; i++) {
+    const z = 2 * i / 3 - 1
+    curvePath(ctx, [0, 0.2, 0.4, 0.6, 0.8, 1].map(t => [
+      -4 - 16 * t,
+      4 * z + 2 * t * z + (Math.cos(time * t * (4 + rnd(t + z)) + t - z) + Math.sin(time * t * (4 + rnd(t + z + 10)) + t + z)) / 2
+    ]))
+  }
+  ctx.stroke()
+}
+
+function mapTransform(ctx: CanvasRenderingContext2D) {
+  ctx.scale(0.92, 0.92)
+  ctx.translate(1024 * 0.04, 1024 * 0.08)
+}
 function generateFullMap() {
   const canvas = document.createElement('canvas')
   const size = 1024
@@ -61,10 +109,6 @@ function generateFullMap() {
   const textures = createTextures('#421', 4)
   const wtextures = createTextures('#336', 4)
   ctx.scale(size / 1024, size / 1024)
-  function transform() {
-    ctx.scale(0.92, 0.92)
-    ctx.translate(1024 * 0.04, 1024 * 0.08)
-  }
   ctx.beginPath()
   crackPath(ctx, 512, 512, 512, 0.1)
   ctx.clip()
@@ -78,7 +122,7 @@ function generateFullMap() {
   ctx.rect(margin, margin, 1024 - 2 * margin, 1024 - 2 * margin)
   ctx.save()
   ctx.clip()
-  transform()
+  mapTransform(ctx)
   const wline: [number, number][] = []
   const woffset = 16
   for (let i = 0; i < 100; i++) {
@@ -189,7 +233,7 @@ function generateFullMap() {
   ctx.fillText(genText(400), 200 + innerMargin, 1024 - (lineOuterMargin + innerMargin) / 2)
   ctx.fillText(genText(200), 924 - innerMargin, 1024 - (lineOuterMargin + innerMargin) / 2)
   ctx.save()
-  transform()
+  mapTransform(ctx)
   depths.forEach((depth, i) => {
     ctx.fillText(String(40 * i), 1024 + 26, depth)
   })

@@ -187,7 +187,11 @@ menu.components.gear = new GearComponent(gearValue, values => {
   render()
 })
 menu.components.book = new BookComponent(rendererManager)
-menu.components.map = new MapComponent()
+menu.components.map = new MapComponent(() => ({
+  x: jelly.position.x * 8 + 512,
+  y: -jelly.position.z * 8,
+  th: -player.th
+}))
 
 mainDiv.appendChild(uiCanvas)
 const fullSquareStyle = document.createElement('style')
