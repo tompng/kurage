@@ -28,7 +28,7 @@ const textures = textureUrls.map(url => {
   return texture
 })
 const mainDiv = document.querySelector<HTMLDivElement>('#main')!
-const gearValue: GearValue = [[0], 1, [0,1], 0]
+let gearValue: GearValue = [[0], 1, [0,1], 0]
 const menu = new Menu(mainDiv)
 document.querySelectorAll<HTMLDivElement>('.gear-select-body .gear-item').forEach((el, i) => {
   el.style.backgroundImage = 'url(' + textureUrls[i] + ')'
@@ -183,15 +183,24 @@ renderOnResize.push(() => {
 })
 
 menu.components.gear = new GearComponent(gearValue, values => {
+  gearValue = values
   updateJellyByGearValue(values)
   render()
 })
 menu.components.book = new BookComponent(rendererManager)
-menu.components.map = new MapComponent(() => ({
-  x: jelly.position.x * 8 + 512,
-  y: -jelly.position.z * 8,
-  th: -player.th
-}))
+menu.components.map = new MapComponent(
+  () => ({
+    x: jelly.position.x * 8 + 512,
+    y: -jelly.position.z * 8,
+    th: -player.th
+  }),
+  p => {
+    const p3d = { x: (p.x - 512) / 8, y: 0, z: -p.y / 8 }
+    world.warp(p3d)
+    updateJellyByGearValue(gearValue)
+    menu.close()
+  }
+)
 
 mainDiv.appendChild(uiCanvas)
 const fullSquareStyle = document.createElement('style')

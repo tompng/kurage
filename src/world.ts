@@ -37,7 +37,14 @@ export class World {
     th: Math.PI,
     dstTheta: Math.PI
   }
-
+  warp(p: Point3D) {
+    const { player } = this
+    this.centerPosition.reset(p)
+    player.x = p.x
+    player.z = p.z
+    player.vx = this.player.vz = 0
+    this.jelly.warp(p)
+  }
   update(dt: number, touchPosition: Point3D | null) {
     const { player, jelly } = this
     this.oceanSurface.update(dt)

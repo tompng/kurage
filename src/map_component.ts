@@ -26,8 +26,9 @@ export class MapComponent {
   target : {
     point: Point2D
     startTime: number
+    animationDone?: boolean
   } | null = null
-  constructor(public getCurrentJellyPos: PositionFunc) {
+  constructor(public getCurrentJellyPos: PositionFunc, public doWarp: (p: Point2D) => void) {
     this.dom = document.querySelector<HTMLDivElement>('#map')!
     this.canvas = this.dom.querySelector<HTMLCanvasElement>('canvas')!
     this.canvas.onpointerdown = e => {
@@ -80,8 +81,12 @@ export class MapComponent {
       const ch = canvas.offsetHeight
       const x = canvasX / 1024 * cw + (w - cw) / 2
       const y = canvasY / 1024 * ch + (h - ch) / 2
-      zoomdom.style.background = `radial-gradient(
-        circle at ${x}px ${y}px, transparent ${Math.max(r - 2, 0)}px, black ${r}px)`
+      if (r <= 0) {
+        zoomdom.style.background = 'black'
+      } else {
+        zoomdom.style.background = `radial-gradient(circle at ${x}px ${y}px, transparent ${Math.max(r - 2, 0)}px, black ${r}px)`
+      }
+      if (t > 4) target.animationDone = true
     } else {
       zoomdom.style.display = 'none'
     }
@@ -93,11 +98,15 @@ export class MapComponent {
     this.render()
     this.animate()
   }
+  update() {
+    if (this.target?.animationDone) this.doWarp(this.target.point)
+  }
   animate() {
     if (this.timer) return
     this.timer = requestAnimationFrame(() => {
       this.timer = null
       this.render()
+      this.update()
       this.animate()
     })
   }

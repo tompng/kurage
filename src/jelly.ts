@@ -367,6 +367,34 @@ export class Jelly {
       }
     }
   }
+  warp(p: Point3D) {
+    const { position, coords, segments, strings } = this
+    const dx = p.x - position.x
+    const dy = p.y - position.y
+    const dz = p.z - position.z
+    position.x += dx
+    position.y += dy
+    position.z += dz
+    for (let iz = 0; iz < 2; iz++) {
+      for (let ix = 0; ix <= segments; ix++) {
+        for (let iy = 0; iy <= segments; iy++) {
+          const { p, dst } = coords[iz][ix][iy]
+          p.x += dx
+          p.y += dy
+          p.z += dz
+          dst.x += dx
+          dst.y += dy
+          dst.z += dz
+        }
+      }
+    }
+    for (const { string } of strings) {
+      string.points[0].x += dx
+      string.points[0].y += dy
+      string.points[0].z += dz
+      string.calcPoints()
+    }
+  }
   update(dt: number = 0.01) {
     if (dt === 0) return
     this.currentBoundingPolygon = null
