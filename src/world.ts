@@ -44,6 +44,7 @@ export class World {
     player.z = p.z
     player.vx = this.player.vz = 0
     this.jelly.warp(p)
+    this.initializeByCenterPoint(p)
   }
   update(dt: number, touchPosition: Point3D | null) {
     const { player, jelly } = this
@@ -160,7 +161,7 @@ export class World {
     renderer.setRenderTarget(null)
   }
   initializeByCenterPoint(center: Point3D) {
-    this.fsCloud.initialSpawn(center, 2)
+    this.fsCloud.initialSpawn(center, 3)
   }
   renderToScreen(renderer: THREE.WebGLRenderer) {
     renderer.setRenderTarget(null)
