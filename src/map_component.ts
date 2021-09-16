@@ -58,7 +58,7 @@ function generateFullMap() {
   const size = 1024
   canvas.width = canvas.height = size
   const ctx = canvas.getContext('2d')!
-  const textures = createTextures('#112', 4)
+  const textures = createTextures('#311', 4)
   const wtextures = createTextures('#336', 4)
   ctx.scale(size / 1024, size / 1024)
   function transform() {
@@ -88,8 +88,8 @@ function generateFullMap() {
   ctx.save()
   ctx.beginPath()
   curvePath(ctx, wline)
-  ctx.lineTo(1024 + woffset, 32)
-  ctx.lineTo(-woffset, 32)
+  ctx.lineTo(1024 + woffset, 1024)
+  ctx.lineTo(-woffset, 1024)
   ctx.clip()
   for (const [x, y] of wline) {
     const rndx = 8 * Math.random() - 4
@@ -154,16 +154,46 @@ function generateFullMap() {
   ctx.fillStyle = '#e0d8d0'
   ctx.fill()
   ctx.stroke()
+  ctx.font = '10px serif'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillStyle = 'black'
+  function genText(width: number) {
+    const words = ['kurage', 'jelly', 'world', 'ocean', 'sea']
+    let wsum = 0
+    let texts: string[] = []
+    while (true) {
+      const s = [...words[Math.floor(words.length * Math.random())]].map(s => (Math.random() < 0.1 ? ' ' + s : s)).join('')
+      const s2 = (texts.length === 0 ? s.replace(/^ ?(.)/, (_, s) => s.toUpperCase()) : s).replaceAll(/ ./g, s => (
+        Math.random() < 0.2 ? '.' + s.toUpperCase() : Math.random() < 0.4 ? ',' + s : s
+      ))
+      const w = ctx.measureText(s2).width
+      if (w + wsum > width) return texts.join('')
+      texts.push(s2)
+      wsum += w
+    }
+  }
+
+  ctx.fillText(genText(1024 - innerMargin * 2), 512, (lineOuterMargin + innerMargin) / 2)
+  ctx.fillText(genText(400), 200 + innerMargin, 1024 - (lineOuterMargin + innerMargin) / 2)
+  ctx.fillText(genText(200), 924 - innerMargin, 1024 - (lineOuterMargin + innerMargin) / 2)
   transform()
   depths.forEach((depth, i) => {
-    ctx.font = '10px serif'
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-    ctx.fillStyle = 'black'
     ctx.fillText(String(40 * i), 1024 + 26, depth)
   })
-
   ctx.restore()
+  ctx.globalAlpha = 0.2
+  const dirtyTextures = createTextures('#742', 8)
+  for (let i = 0; i < 10; i++) {
+    for (const texture of dirtyTextures) {
+      const size = 64 + 128 * Math.random()
+      const t = Math.random()
+      const u = Math.random()
+      const x = -size + (1024 + size) * (t * t * (3 - 2 * t))
+      const y = -size + (1024 + size) * (u * u * (3 - 2 * u))
+      ctx.drawImage(texture, x, y, size, size)
+    }
+  }
   return canvas
 }
 function rectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, rnd: number, step = 16) {
