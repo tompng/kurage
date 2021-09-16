@@ -58,7 +58,7 @@ function generateFullMap() {
   const size = 1024
   canvas.width = canvas.height = size
   const ctx = canvas.getContext('2d')!
-  const textures = createTextures('#311', 4)
+  const textures = createTextures('#421', 4)
   const wtextures = createTextures('#336', 4)
   ctx.scale(size / 1024, size / 1024)
   function transform() {
@@ -188,11 +188,13 @@ function generateFullMap() {
   ctx.fillText(genText(1024 - innerMargin * 2), 512, (lineOuterMargin + innerMargin) / 2)
   ctx.fillText(genText(400), 200 + innerMargin, 1024 - (lineOuterMargin + innerMargin) / 2)
   ctx.fillText(genText(200), 924 - innerMargin, 1024 - (lineOuterMargin + innerMargin) / 2)
+  ctx.save()
   transform()
   depths.forEach((depth, i) => {
     ctx.fillText(String(40 * i), 1024 + 26, depth)
   })
   ctx.restore()
+  renderMark(ctx, 128, 1024 - 128, 80)
   ctx.globalAlpha = 0.2
   const dirtyTextures = createTextures('#742', 8)
   for (let i = 0; i < 10; i++) {
@@ -207,6 +209,55 @@ function generateFullMap() {
   }
   return canvas
 }
+function renderMark(ctx: CanvasRenderingContext2D, x: number, y: number, r: number) {
+  const a = 0.1
+  const b = 0.9
+  ctx.fillStyle = ctx.strokeStyle = '#543'
+  ctx.globalAlpha = 0.8
+  ctx.lineWidth = (1 - b) / 6
+  ctx.save()
+  ctx.translate(x, y)
+  ctx.scale(r, r)
+  ctx.rotate(0.2)
+  ctx.beginPath()
+  ctx.arc(0, 0, 1, 0, 2 * Math.PI)
+  ctx.stroke()
+  ctx.beginPath()
+  ctx.arc(0, 0, b, 0, 2 * Math.PI)
+  ctx.stroke()
+  ctx.beginPath()
+  for (const [x1, y1, x2, y2] of [[0, b, a, a], [b, 0, a, -a], [0, -b, -a, -a], [-b, 0, -a, a]]) {
+    ctx.moveTo(0, 0)
+    ctx.lineTo(x1, y1)
+    ctx.lineTo(x2, y2)
+  }
+  ctx.fill()
+  ctx.lineCap = ctx.lineJoin = 'round'
+  ctx.beginPath()
+  ctx.moveTo(0, b)
+  for (const [x, y] of [[a, a], [b, 0], [a, -a], [0, -b], [-a, -a], [-b, 0], [-a, a], [0, b]]) ctx.lineTo(x, y)
+  ctx.closePath()
+  ctx.stroke()
+  ctx.beginPath()
+  for (let i = 0; i < 4; i++) {
+    curvePath(ctx, [[a * 1.5, a * 2.5], [a * 2, a * 4], [a * 3.5, a * 3.5], [a * 4, a * 2], [a * 2.5, a * 1.5]])
+    ctx.rotate(Math.PI / 2)
+  }
+  ctx.stroke()
+  ctx.beginPath()
+  ctx.lineWidth = (1 - b) / 8
+  for (let i = 0; i < 64; i++) {
+    const c = 0.6
+    curvePath(ctx, [...new Array(5)].map((_, i) => [
+      c + (b - c) * i / 4,
+      0.01 * (2 * Math.random() - 1)
+    ]))
+    ctx.rotate(Math.PI * 2 / 64)
+  }
+  ctx.stroke()
+  ctx.restore()
+}
+
 function rectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, rnd: number, step = 16) {
   type Line = [number, number][]
   const a: Line = []
