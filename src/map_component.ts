@@ -1,5 +1,6 @@
 import { curvePath } from "./curve_path" 
 import { terrainCoords } from './terrain'
+import { Point2D } from './math'
 
 type PositionFunc = () => {
   x: number
@@ -7,6 +8,16 @@ type PositionFunc = () => {
   th: number
 }
 
+const warpPoints = [
+  { x: 512, y: 12 },
+  { x: 100, y: 48 },
+  { x: 128, y: 512 },
+  { x: 435, y: 660 },
+  { x: 700, y: 400 },
+  { x: 800, y: 750 },
+  { x: 790, y: 100 },
+  { x: 480, y: 256 },
+]
 export class MapComponent {
   dom: HTMLDivElement
   mode: number | null = null
@@ -21,6 +32,9 @@ export class MapComponent {
   constructor(public getCurrentJellyPos: PositionFunc) {
     this.dom = document.querySelector<HTMLDivElement>('#map')!
     this.canvas = this.dom.querySelector<HTMLCanvasElement>('canvas')!
+    this.canvas.onclick = e => {
+      console.log(transformToMapPoint({ x: e.offsetX/this.canvas.offsetWidth*1024, y: e.offsetY/this.canvas.offsetWidth*1024 }))
+    }
     this.dom.remove()
   }
   render() {
@@ -105,10 +119,16 @@ function drawJelly(ctx: CanvasRenderingContext2D) {
   }
   ctx.stroke()
 }
-
+const trans = { scale: 0.92, x: 1024 * 0.04, y: 1024 * 0.08 }
+function transformToMapPoint({ x, y }: Point2D) {
+  return {
+    x: x / trans.scale - trans.x,
+    y: y / trans.scale - trans.y
+  }
+}
 function mapTransform(ctx: CanvasRenderingContext2D) {
-  ctx.scale(0.92, 0.92)
-  ctx.translate(1024 * 0.04, 1024 * 0.08)
+  ctx.scale(trans.scale, trans.scale)
+  ctx.translate(trans.x, trans.y)
 }
 function generateFullMap() {
   const canvas = document.createElement('canvas')
@@ -165,6 +185,16 @@ function generateFullMap() {
 
   ctx.restore()
 
+  ctx.strokeStyle = '#421'
+  for (const { x, y } of warpPoints) {
+    ctx.beginPath()
+    ctx.arc(x, y, 6, 0, 2 * Math.PI)
+    ctx.stroke()
+    ctx.beginPath()
+    ctx.arc(x, y, 10, 0, 2 * Math.PI)
+    ctx.stroke()
+  }
+
   for (const line of terrainCoords) {
     const first = line[0]
     const last = line[line.length - 1]
@@ -198,6 +228,7 @@ function generateFullMap() {
   }
   const depths = [...new Array(8)].map((_, i) => 900 * i / 7)
   const rnd = 1.5
+  ctx.strokeStyle = '#403028'
   for (const depth of depths) {
     ctx.beginPath()
     curvePath(ctx, [...new Array(17)].map((_, i) => [-32 + (1024 + 32 * 2) * i / 16, depth + rnd * (2 * Math.random() - 1)]))
