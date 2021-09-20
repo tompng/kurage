@@ -78,6 +78,11 @@ export class Menu {
       executeClose()
     }
   }
+  closeImmediate() {
+    this.closeMenu.reset()
+    this.closeMenu.render()
+    this.close()
+  }
   reRender() {
     for (const { icon } of Object.values(this.buttons)) icon.render()
     this.switcher.component?.render?.()

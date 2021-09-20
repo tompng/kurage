@@ -198,7 +198,7 @@ menu.components.map = new MapComponent(
     const p3d = { x: (p.x - 512) / 8, y: 0, z: -p.y / 8 }
     world.warp(p3d)
     updateJellyByGearValue(gearValue)
-    menu.close()
+    menu.closeImmediate()
   }
 )
 

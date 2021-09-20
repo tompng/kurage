@@ -214,6 +214,10 @@ export class CloseMenuIcon {
     this.dir = -1
     this.animate()
   }
+  reset() {
+    this.dir = -1
+    this.phase = 0
+  }
   prevTime = 0
   onUpdate: ((phase: number, dir: -1 | 1) => void) | null = null
   animate() {

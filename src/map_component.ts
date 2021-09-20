@@ -27,10 +27,21 @@ export class MapComponent {
     point: Point2D
     startTime: number
     animationDone?: boolean
+    warped?: boolean
   } | null = null
+  zoomDom: HTMLDivElement
   constructor(public getCurrentJellyPos: PositionFunc, public doWarp: (p: Point2D) => void) {
     this.dom = document.querySelector<HTMLDivElement>('#map')!
     this.canvas = this.dom.querySelector<HTMLCanvasElement>('canvas')!
+    this.zoomDom = document.createElement('div')
+    this.zoomDom.style.cssText = `
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 9999;
+    `
     this.canvas.onpointerdown = e => {
       if (this.target) return
       const p = transformToMapPoint({ x: e.offsetX / this.canvas.offsetWidth * 1024, y: e.offsetY / this.canvas.offsetWidth * 1024 })
@@ -67,13 +78,17 @@ export class MapComponent {
         renderWarpMarker(ctx, p, time / 1000, 0)
       }
     }
-    const zoomdom = this.dom.querySelector<HTMLDivElement>('.mapzoom')!
+    const { zoomDom } = this
     if (this.target) {
+      if (!zoomDom.parentNode) {
+        this.dom.parentNode?.appendChild(zoomDom)
+        zoomDom.style.opacity = '1'
+      }
       const { canvas, target } = this
       const t = (time - target.startTime) / 400
-      zoomdom.style.display = 'block'
-      const w = zoomdom.offsetWidth
-      const h = zoomdom.offsetHeight
+      zoomDom.style.display = 'block'
+      const w = zoomDom.offsetWidth
+      const h = zoomDom.offsetHeight
       const rmax = Math.hypot(w, h) / 2
       const r = rmax * (t < 1 ? Math.sqrt(((t - 1) ** 2 + 0.1) / 1.1) : (t < 2 ? 1 : 1 - 2 * (t - 2) ** 2) * Math.sqrt(0.1 / 1.1))
       const { x: canvasX, y: canvasY } = transformFromMapPoint(target.point)
@@ -82,24 +97,32 @@ export class MapComponent {
       const x = canvasX / 1024 * cw + (w - cw) / 2
       const y = canvasY / 1024 * ch + (h - ch) / 2
       if (r <= 0) {
-        zoomdom.style.background = 'black'
+        zoomDom.style.background = 'black'
+        canvas.style.opacity = '0'
       } else {
-        zoomdom.style.background = `radial-gradient(circle at ${x}px ${y}px, transparent ${Math.max(r - 2, 0)}px, black ${r}px)`
+        zoomDom.style.background = `radial-gradient(circle at ${x}px ${y}px, transparent ${Math.max(r - 2, 0)}px, black ${r}px)`
       }
       if (t > 4) target.animationDone = true
     } else {
-      zoomdom.style.display = 'none'
+      zoomDom.remove()
     }
     ctx.restore()
   }
   timer: number | null = null
   start() {
+    this.canvas.style.opacity = this.zoomDom.style.opacity = '1'
     this.target = null
     this.render()
     this.animate()
   }
+  transition(phase: number, dir: -1 | 1) {
+    this.zoomDom.style.opacity = String(phase)
+  }
   update() {
-    if (this.target?.animationDone) this.doWarp(this.target.point)
+    if (this.target?.animationDone && !this.target.warped) {
+      this.doWarp(this.target.point)
+      this.target.warped = true
+    }
   }
   animate() {
     if (this.timer) return
@@ -113,6 +136,7 @@ export class MapComponent {
   end() {
     if (!this.timer) return
     cancelAnimationFrame(this.timer)
+    this.zoomDom.remove()
     this.timer = null
   }
 }
