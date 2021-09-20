@@ -59,14 +59,22 @@ export class Menu {
     this.onOpen?.(type)
     const component = this.components[type] || { dom: defaultComponent }
     for (const [key, button] of Object.entries(this.buttons)) {
-      button.div.style.opacity = key === type ? '1' : '0'
+      if (key === type) {
+        button.div.style.opacity = '1'
+        button.div.style.backgroundColor = 'rgb(128, 128, 128, 0.5)'
+      } else {
+        button.div.style.opacity = '0'
+      }
     }
     this.closeMenu.activate()
     this.switcher.show(component)
   }
   close() {
     const executeClose = () => {
-      for (const { div } of Object.values(this.buttons)) div.style.opacity = ''
+      for (const { div } of Object.values(this.buttons)) {
+        div.style.backgroundColor = ''
+        div.style.opacity = ''
+      }
       this.type = null
       this.closeMenu.deactivate()
       this.switcher.hide()
